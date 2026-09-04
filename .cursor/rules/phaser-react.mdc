@@ -1,0 +1,13 @@
+---
+description: Phaser 3 + React conventions for questshift-ui
+globs: "**/*.{ts,tsx,css}"
+alwaysApply: false
+---
+
+# Phaser / React
+
+- Dual panel: `DungeonScene` (pixel art) + `TerminalPanel` (IBM Plex Mono). Do not merge them.
+- Sprite sheet `/assets/kenney/tiny-dungeon/tilemap_packed.png`: 16×16, 12 columns, spacing 0. Use UX.md keys (`seat_guardian`, `room_01_broken_shell`, `gem_complete`, …). `pixelArt: true`.
+- REST lives in `src/api/client.ts`. Match engine camelCase session fields. Proxy `/api` and `/ws` only.
+- Seats are cosmetic. Submit commands as typed; do not filter by `seatId`.
+- No Web Speech, no `child_process`, no `oc` from the browser. Keep the CRT look in CSS, readable type in the log.

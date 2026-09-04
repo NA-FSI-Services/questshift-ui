@@ -1,0 +1,19 @@
+---
+description: QuestShift always-on map for the UI repo
+alwaysApply: true
+---
+
+# QuestShift (ui)
+
+Read this repo's `AGENTS.md`, then essentials and UX sprite keys.
+
+- Local AGENTS: `/Users/dtorresf/Documents/GitHub/na-fsi-services/questshift/questshift-ui/AGENTS.md`
+  GitHub: https://github.com/NA-FSI-Services/questshift-ui/blob/main/AGENTS.md
+- Docs AGENTS: https://github.com/NA-FSI-Services/questshift/blob/main/AGENTS.md
+  Local: `/Users/dtorresf/Documents/GitHub/na-fsi-services/questshift/questshift/AGENTS.md`
+- Essentials: https://github.com/NA-FSI-Services/questshift/blob/main/docs/ARCHITECTURE-ESSENTIALS.md
+  Local: `/Users/dtorresf/Documents/GitHub/na-fsi-services/questshift/questshift/docs/ARCHITECTURE-ESSENTIALS.md`
+- UX: https://github.com/NA-FSI-Services/questshift/blob/main/docs/UX.md
+  Local: `/Users/dtorresf/Documents/GitHub/na-fsi-services/questshift/questshift/docs/UX.md`
+
+Phaser 3 + React. Panel A uses Kenney Tiny Dungeon CC0 (`public/assets/kenney/tiny-dungeon/tilemap_packed.png`). Panel B is IBM Plex Mono. No AI sprites, no TTS, no cluster exec.
