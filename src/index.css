@@ -1,0 +1,38 @@
+:root {
+  color-scheme: dark;
+  --bg: #070a09;
+  --panel: #101714;
+  --ink: #d7eadb;
+  --muted: #7f9a86;
+  --accent: #8fe0a4;
+  --amber: #e0b25a;
+  --term: #07110c;
+  --fail: #d96a4a;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at top, #15201a, var(--bg) 55%);
+  color: var(--ink);
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
