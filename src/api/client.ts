@@ -85,3 +85,26 @@ export async function exportSession(sessionId: string): Promise<string> {
   }
   return res.text();
 }
+
+export async function getSession(sessionId: string): Promise<GameSession> {
+  const res = await fetch(`/api/sessions/${sessionId}`);
+  if (!res.ok) {
+    throw new Error("Could not load session");
+  }
+  return res.json();
+}
+
+export async function importSession(body: string): Promise<GameSession> {
+  const format = body.trimStart().startsWith("{") ? "json" : "yaml";
+  const res = await fetch(`/api/sessions/import?format=${format}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": format === "json" ? "application/json" : "application/yaml",
+    },
+    body,
+  });
+  if (!res.ok) {
+    throw new Error("Import failed");
+  }
+  return res.json();
+}

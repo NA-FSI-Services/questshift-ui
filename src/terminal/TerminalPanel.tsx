@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import type { GameSession } from "../api/client";
 
 type LogLine = { kind: "gm" | "you" | "sys"; text: string };
@@ -8,9 +8,10 @@ type Props = {
   busy: boolean;
   onCommand: (command: string) => Promise<void>;
   onExport: () => Promise<void>;
+  onImport: (body: string) => Promise<void>;
 };
 
-export function TerminalPanel({ session, busy, onCommand, onExport }: Props) {
+export function TerminalPanel({ session, busy, onCommand, onExport, onImport }: Props) {
   const [draft, setDraft] = useState("");
   const [log, setLog] = useState<LogLine[]>([
     { kind: "sys", text: "QuestShift terminal. Seats are cosmetic. Anyone may solve." },
@@ -44,12 +45,25 @@ export function TerminalPanel({ session, busy, onCommand, onExport }: Props) {
     await onCommand(command);
   }
 
+  async function onPickFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    const text = await file.text();
+    setLog((prev) => [...prev, { kind: "sys", text: `restored ${file.name}` }]);
+    await onImport(text);
+  }
+
   return (
     <section className="terminal">
       <header className="terminal-header">
         <span>gm@questshift:~</span>
         <span className="clock">
-          {session ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s` : "--"}
+          {session
+            ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s`
+            : "--"}
         </span>
       </header>
       <div className="log" aria-live="polite">
@@ -77,7 +91,9 @@ export function TerminalPanel({ session, busy, onCommand, onExport }: Props) {
               void onSubmit(e);
             }
           }}
-          placeholder={session ? "type a command, YAML, oc, or Java snippet…" : "start a session first"}
+          placeholder={
+            session ? "type a command, YAML, oc, or Java snippet…" : "start a session first"
+          }
           rows={3}
         />
         <button type="submit" disabled={!session || busy}>
@@ -85,9 +101,20 @@ export function TerminalPanel({ session, busy, onCommand, onExport }: Props) {
         </button>
       </form>
       <footer className="terminal-footer">
-        <button type="button" disabled={!session} onClick={() => void onExport()}>
-          export.yaml
-        </button>
+        <span className="footer-actions">
+          <button type="button" disabled={!session} onClick={() => void onExport()}>
+            export.yaml
+          </button>
+          <label className="import-yaml">
+            import.yaml
+            <input
+              type="file"
+              accept=".yaml,.yml,.json,application/yaml,application/json"
+              disabled={busy}
+              onChange={(event) => void onPickFile(event)}
+            />
+          </label>
+        </span>
         {session?.lastHint ? <span className="hint">hint: {session.lastHint}</span> : null}
       </footer>
     </section>

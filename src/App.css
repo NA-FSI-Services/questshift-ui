@@ -104,6 +104,31 @@
   border-top: 1px solid #1d3a28;
 }
 
+.footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.import-yaml {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: #163221;
+  color: var(--accent);
+  border: 1px solid #2f5a3c;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.import-yaml input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 .log {
   overflow: auto;
   padding: 0.8rem;

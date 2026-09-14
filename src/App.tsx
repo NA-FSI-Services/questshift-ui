@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   exportSession,
+  getSession,
+  importSession,
   listCampaigns,
   startSession,
   submitCommand,
@@ -70,6 +72,18 @@ export default function App() {
     });
   }, [session, campaign]);
 
+  useEffect(() => {
+    if (!session?.id) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void getSession(session.id)
+        .then(setSession)
+        .catch(() => undefined);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [session?.id]);
+
   async function begin() {
     setBusy(true);
     setError(null);
@@ -111,6 +125,18 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  async function onImport(body: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      setSession(await importSession(body));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "import failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -136,7 +162,13 @@ export default function App() {
             <p className="loot">inventory: {session.inventory.join(", ") || "empty"}</p>
           ) : null}
         </section>
-        <TerminalPanel session={session} busy={busy} onCommand={onCommand} onExport={onExport} />
+        <TerminalPanel
+          session={session}
+          busy={busy}
+          onCommand={onCommand}
+          onExport={onExport}
+          onImport={onImport}
+        />
       </main>
     </div>
   );

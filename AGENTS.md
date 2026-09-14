@@ -22,3 +22,4 @@ Phaser 3 + React + TypeScript. Vite proxies `/api` and `/ws` to `localhost:8080`
 - No TTS, mic, or Web Speech.
 - Do not commit `.env` or API keys (already gitignored). v1 UI has no auth.
 - Run: `npm install && npm run dev` (engine already on `:8080`).
+- Quality: `npm run verify` (Prettier, ESLint, Vitest ≥ 80% lines / 70% branches, `tsc`+Vite build). Pre-commit: `./.githooks/install`. CI: `.github/workflows/quality.yml`.

@@ -15,7 +15,18 @@ npm install
 npm run dev
 ```
 
-Vite proxies `/api` and `/ws` to the Quarkus engine.
+Vite proxies `/api` and `/ws` to the Quarkus engine. Panel B **export.yaml** / **import.yaml** persist the run through the engine (`POST /api/sessions/import`).
+
+## Quality gates
+
+```bash
+npm run format:check   # Prettier
+npm run lint           # ESLint (static analysis)
+npm run test:coverage  # Vitest, ≥ 80% lines / 70% branches (excludes Phaser canvas)
+npm run verify         # format + lint + coverage + production build
+```
+
+Pre-commit (once per clone): `./.githooks/install`. PRs to `main` run **Quality** / **Format, lint, coverage**.
 
 ## Layout
 

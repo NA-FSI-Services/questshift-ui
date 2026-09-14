@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Prettier (format), ESLint (static analysis), Vitest coverage ≥ 80% lines / 70% branches.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+CONFIG="$ROOT/.githooks/config"
+if [[ -f "$CONFIG" ]]; then
+    # shellcheck disable=SC1090
+    source "$CONFIG"
+fi
+
+if [[ "${SKIP_QUESTSHIFT_HOOKS:-}" == "1" ]]; then
+    echo "questshift-ui pre-commit: skipped (SKIP_QUESTSHIFT_HOOKS=1)"
+    exit 0
+fi
+
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -Eq '\.(ts|tsx|js|css|json)$|^package\.json$|^\.githooks/|^eslint\.config\.js$|^vite\.config\.ts$'; then
+    exit 0
+fi
+
+echo "questshift-ui pre-commit: format, lint, coverage"
+npm run verify

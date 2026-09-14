@@ -53,6 +53,9 @@ web_modules/
 # Optional eslint cache
 .eslintcache
 
+# Local pre-commit overrides
+.githooks/config
+
 # Optional stylelint cache
 .stylelintcache
 
