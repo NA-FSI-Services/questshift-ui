@@ -26,7 +26,7 @@ npm run test:coverage  # Vitest, ≥ 80% lines / 70% branches (excludes Phaser c
 npm run verify         # format + lint + coverage + production build
 ```
 
-Pre-commit (once per clone): `./.githooks/install`. PRs to `main` run **Quality** / **Format, lint, coverage**.
+Pre-commit (once per clone): `./.githooks/install`. PRs to `main` run **Quality** / **Format, lint, coverage**. Dependabot opens weekly GitHub Actions update PRs.
 
 ## Layout
 
