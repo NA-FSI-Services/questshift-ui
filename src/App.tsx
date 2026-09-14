@@ -26,6 +26,7 @@ export default function App() {
   const gameRef = useRef<ReturnType<typeof createDungeonGame> | null>(null);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [session, setSession] = useState<GameSession | null>(null);
+  const [missed, setMissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +70,10 @@ export default function App() {
       completed: session.puzzleCompletion,
       canvasEvent: session.lastCanvasEvent,
       seats: campaign?.seats ?? [],
+      inventory: session.inventory,
+      missed,
     });
-  }, [session, campaign]);
+  }, [session, campaign, missed]);
 
   useEffect(() => {
     if (!session?.id) {
@@ -87,6 +90,7 @@ export default function App() {
   async function begin() {
     setBusy(true);
     setError(null);
+    setMissed(false);
     try {
       setSession(await startSession(defaultParty));
     } catch (err) {
@@ -103,6 +107,11 @@ export default function App() {
     setBusy(true);
     try {
       const result = await submitCommand(session.id, command, "shared");
+      if (result.session.currentRoomId !== session.currentRoomId) {
+        setMissed(false);
+      } else {
+        setMissed(!result.passed);
+      }
       setSession(result.session);
     } catch (err) {
       setError(err instanceof Error ? err.message : "command failed");
@@ -128,6 +137,7 @@ export default function App() {
   async function onImport(body: string) {
     setBusy(true);
     setError(null);
+    setMissed(false);
     try {
       setSession(await importSession(body));
     } catch (err) {

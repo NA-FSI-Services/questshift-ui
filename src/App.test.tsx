@@ -112,6 +112,35 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "send" }));
     await waitFor(() => expect(submitCommand).toHaveBeenCalledWith("s1", "grep rune", "shared"));
     expect(await screen.findByText(/rune-ash/)).toBeInTheDocument();
+    expect(emit).toHaveBeenCalledWith(
+      "board",
+      expect.objectContaining({
+        inventory: ["rune-thorn", "rune-ash"],
+        missed: false,
+      }),
+    );
+  });
+
+  it("marks the current room as missed after a failed command", async () => {
+    startSession.mockResolvedValue(session);
+    submitCommand.mockResolvedValue({
+      passed: false,
+      message: "nope",
+      command: "cat",
+      session,
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    await screen.findByText(/inventory: rune-thorn/);
+    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "cat" } });
+    fireEvent.click(screen.getByRole("button", { name: "send" }));
+    await waitFor(() =>
+      expect(emit).toHaveBeenCalledWith(
+        "board",
+        expect.objectContaining({ missed: true, inventory: ["rune-thorn"] }),
+      ),
+    );
   });
 
   it("exports yaml through a download link", async () => {

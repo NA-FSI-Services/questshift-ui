@@ -1,0 +1,126 @@
+import { describe, expect, it } from "vitest";
+import {
+  gemKeyFor,
+  frameFor,
+  lootSpriteKey,
+  LOOT_ORDER,
+  LOOT_SPRITE_KEYS,
+  ROOM_SPRITE_KEYS,
+  roomSpriteKey,
+  SEAT_SPRITE_KEYS,
+  seatSpriteKey,
+  SHEET_SPACING,
+  SPRITE_FRAMES,
+  SPRITE_SCALE,
+  SPRITESHEET_LOAD,
+  TILE_SIZE,
+  TINY_DUNGEON_PATH,
+  TINY_DUNGEON_SHEET,
+} from "./sprites";
+
+const UX_FRAMES: Record<string, number> = {
+  room_01_broken_shell: 29,
+  room_02_playbook: 56,
+  room_03_pod: 80,
+  room_04_servlet: 54,
+  room_05_throne: 72,
+  floor: 48,
+  wall: 28,
+  focus: 60,
+  seat_automancer: 84,
+  seat_artificer: 86,
+  seat_ranger: 87,
+  seat_guardian: 96,
+  gem_locked: 113,
+  gem_current: 115,
+  gem_complete: 114,
+  gem_hint: 116,
+  loot_thorn: 29,
+  loot_ash: 113,
+  loot_oak: 114,
+  loot_iron: 116,
+};
+
+describe("Kenney sprite keys", () => {
+  it("loads the packed sheet at 16×16 with spacing 0", () => {
+    expect(SPRITESHEET_LOAD).toEqual({
+      key: TINY_DUNGEON_SHEET,
+      url: TINY_DUNGEON_PATH,
+      frameConfig: { frameWidth: 16, frameHeight: 16, spacing: 0 },
+    });
+    expect(TILE_SIZE).toBe(16);
+    expect(SHEET_SPACING).toBe(0);
+    expect(SPRITE_SCALE).toBe(3);
+    expect(TINY_DUNGEON_PATH).toContain("tilemap_packed.png");
+  });
+
+  it("maps every UX.md named key to the Kenney frame index", () => {
+    expect(Object.keys(SPRITE_FRAMES).sort()).toEqual(Object.keys(UX_FRAMES).sort());
+    for (const [key, frame] of Object.entries(UX_FRAMES)) {
+      expect(frameFor(key as keyof typeof SPRITE_FRAMES)).toBe(frame);
+    }
+  });
+
+  it("maps campaign room ids and seat ids to named keys", () => {
+    expect(ROOM_SPRITE_KEYS["room-01-broken-shell"]).toBe("room_01_broken_shell");
+    expect(ROOM_SPRITE_KEYS["room-02-playbook-of-binding"]).toBe("room_02_playbook");
+    expect(ROOM_SPRITE_KEYS["room-03-pod-that-would-not-wake"]).toBe("room_03_pod");
+    expect(ROOM_SPRITE_KEYS["room-04-cursed-servlet"]).toBe("room_04_servlet");
+    expect(ROOM_SPRITE_KEYS["room-05-operators-throne"]).toBe("room_05_throne");
+    expect(roomSpriteKey("unknown-room")).toBe("floor");
+    expect(SEAT_SPRITE_KEYS.guardian).toBe("seat_guardian");
+    expect(seatSpriteKey("automancer")).toBe("seat_automancer");
+    expect(seatSpriteKey("missing")).toBeUndefined();
+  });
+
+  it("maps inventory runes to loot keys and ignores trophy ids", () => {
+    expect(LOOT_ORDER).toEqual(["rune-thorn", "rune-ash", "rune-oak", "rune-iron"]);
+    expect(lootSpriteKey("rune-thorn")).toBe("loot_thorn");
+    expect(LOOT_SPRITE_KEYS["rune-iron"]).toBe("loot_iron");
+    expect(lootSpriteKey("cluster-name")).toBeUndefined();
+  });
+
+  it("picks gem keys from completion, current room, and miss", () => {
+    const completed = { "room-01-broken-shell": true };
+    expect(
+      gemKeyFor({
+        roomId: "room-01-broken-shell",
+        currentRoomId: "room-02-playbook-of-binding",
+        completed,
+        missed: true,
+      }),
+    ).toBe("gem_complete");
+    expect(
+      gemKeyFor({
+        roomId: "room-02-playbook-of-binding",
+        currentRoomId: "room-02-playbook-of-binding",
+        completed,
+        missed: false,
+      }),
+    ).toBe("gem_current");
+    expect(
+      gemKeyFor({
+        roomId: "room-02-playbook-of-binding",
+        currentRoomId: "room-02-playbook-of-binding",
+        completed,
+        missed: true,
+      }),
+    ).toBe("gem_hint");
+    expect(
+      gemKeyFor({
+        roomId: "room-03-pod-that-would-not-wake",
+        currentRoomId: "room-02-playbook-of-binding",
+        completed,
+        missed: true,
+      }),
+    ).toBe("gem_locked");
+    expect(
+      gemKeyFor({
+        roomId: "room-01-broken-shell",
+        currentRoomId: "",
+        completed: {},
+        missed: false,
+      }),
+    ).toBe("gem_locked");
+  });
+});
