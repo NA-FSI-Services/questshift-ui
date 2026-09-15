@@ -16,6 +16,7 @@ export type GameSession = {
   lastNarrative?: string;
   lastHint?: string;
   lastCanvasEvent?: string;
+  yamlFallback?: boolean;
 };
 
 export type CommandResult = {

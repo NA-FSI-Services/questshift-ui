@@ -87,6 +87,17 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
     expect(startSession).toHaveBeenCalled();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("shows a Game Master offline chip when the engine reports YAML fallback", async () => {
+    startSession.mockResolvedValue({ ...session, yamlFallback: true });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(
+      await screen.findByRole("status", { name: "YAML fallback — Game Master unreachable" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a banner when campaigns fail to load", async () => {

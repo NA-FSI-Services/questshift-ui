@@ -49,6 +49,21 @@ describe("TerminalPanel", () => {
     expect(screen.getByText("2m 5s")).toBeInTheDocument();
     expect(screen.getByText(/Torchlight/)).toBeInTheDocument();
     expect(screen.getByText(/pipe the log/)).toBeInTheDocument();
+    expect(screen.queryByText(/Game Master unreachable/)).not.toBeInTheDocument();
+  });
+
+  it("marks YAML fallback next to the clock", () => {
+    render(
+      <TerminalPanel
+        session={{ ...session, yamlFallback: true }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("YAML fallback — Game Master unreachable")).toBeInTheDocument();
+    expect(screen.getByText("2m 5s")).toBeInTheDocument();
   });
 
   it("submits a trimmed command", async () => {

@@ -35,6 +35,15 @@
   cursor: pointer;
 }
 
+.gm-offline {
+  margin: 0;
+  padding: 0.3rem 0.65rem;
+  background: #3a1c16;
+  color: #ffd0c4;
+  border: 1px solid var(--fail);
+  font-size: 0.85rem;
+}
+
 .banner {
   margin: 0;
   padding: 0.5rem 1.2rem;
@@ -102,6 +111,14 @@
 .terminal-footer {
   border-bottom: 0;
   border-top: 1px solid #1d3a28;
+}
+
+.clock-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .footer-actions {

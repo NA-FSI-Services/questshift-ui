@@ -60,10 +60,17 @@ export function TerminalPanel({ session, busy, onCommand, onExport, onImport }: 
     <section className="terminal">
       <header className="terminal-header">
         <span>gm@questshift:~</span>
-        <span className="clock">
-          {session
-            ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s`
-            : "--"}
+        <span className="clock-row">
+          {session?.yamlFallback ? (
+            <span className="gm-offline" aria-hidden="true">
+              YAML fallback — Game Master unreachable
+            </span>
+          ) : null}
+          <span className="clock">
+            {session
+              ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s`
+              : "--"}
+          </span>
         </span>
       </header>
       <div className="log" aria-live="polite">

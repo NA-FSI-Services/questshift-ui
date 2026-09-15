@@ -155,6 +155,15 @@ export default function App() {
         <button type="button" onClick={() => void begin()} disabled={busy}>
           {session ? "new party" : "start 60-minute run"}
         </button>
+        {session?.yamlFallback ? (
+          <p
+            className="gm-offline"
+            role="status"
+            aria-label="YAML fallback — Game Master unreachable"
+          >
+            YAML fallback — Game Master unreachable
+          </p>
+        ) : null}
       </header>
       {error ? <p className="banner">{error}</p> : null}
       <main className="dual">
