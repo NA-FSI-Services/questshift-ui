@@ -39,6 +39,8 @@ const UX_FRAMES: Record<string, number> = {
   loot_ash: 113,
   loot_oak: 114,
   loot_iron: 116,
+  clue: 89,
+  door: 52,
 };
 
 describe("Kenney sprite keys", () => {

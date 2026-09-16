@@ -250,8 +250,19 @@
   color: #e8f8ea;
 }
 
-.log .board.fail {
-  color: #ffd0c4;
+.log .clue {
+  color: var(--amber);
+}
+
+.map-help {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.phaser-host:focus,
+.phaser-host:focus-within {
+  outline: 1px solid var(--accent);
 }
 
 .prompt-row {

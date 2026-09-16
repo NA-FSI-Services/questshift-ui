@@ -6,12 +6,24 @@ type LogLine = { kind: "gm" | "you" | "sys"; text: string };
 type Props = {
   session: GameSession | null;
   busy: boolean;
+  roomTitle?: string;
+  roomNarrative?: string;
+  clues?: { id: string; label: string; text: string }[];
   onCommand: (command: string) => Promise<void>;
   onExport: () => Promise<void>;
   onImport: (body: string) => Promise<void>;
 };
 
-export function TerminalPanel({ session, busy, onCommand, onExport, onImport }: Props) {
+export function TerminalPanel({
+  session,
+  busy,
+  roomTitle,
+  roomNarrative,
+  clues,
+  onCommand,
+  onExport,
+  onImport,
+}: Props) {
   const [draft, setDraft] = useState("");
   const [log, setLog] = useState<LogLine[]>([
     { kind: "sys", text: "QuestShift terminal. Seats are cosmetic. Anyone may solve." },
@@ -77,6 +89,19 @@ export function TerminalPanel({ session, busy, onCommand, onExport, onImport }: 
           <pre key={`${line.kind}-${index}`} className={line.kind}>
             {line.kind === "gm" ? "GM> " : line.kind === "you" ? "$ " : "# "}
             {line.text}
+          </pre>
+        ))}
+        {roomTitle ? (
+          <pre className="sys">
+            # inside {roomTitle}
+            {roomNarrative ? `\n${roomNarrative.trim()}` : ""}
+          </pre>
+        ) : null}
+        {(clues ?? []).map((clue) => (
+          <pre key={clue.id} className="clue">
+            clue · {clue.label}
+            {"\n"}
+            {clue.text}
           </pre>
         ))}
         {(session?.commandLog ?? [])

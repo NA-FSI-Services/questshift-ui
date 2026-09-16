@@ -1,6 +1,17 @@
 export type PartyMember = {
   name: string;
   seatId: string;
+  mapX?: number;
+  mapY?: number;
+  viewedRoomId?: string;
+};
+
+export type CampaignClue = {
+  id: string;
+  label: string;
+  text: string;
+  x: number;
+  y: number;
 };
 
 export type CommandLogEntry = {
@@ -28,6 +39,7 @@ export type GameSession = {
   lastCanvasEvent?: string;
   yamlFallback?: boolean;
   commandLog?: CommandLogEntry[];
+  foundClues?: string[];
 };
 
 export type CommandResult = {
@@ -44,6 +56,9 @@ export type CampaignRoom = {
   mapX: number;
   mapY: number;
   puzzle_type: string;
+  narrative?: string;
+  prompt?: string;
+  clues?: CampaignClue[];
 };
 
 export type Campaign = {
@@ -137,6 +152,29 @@ export async function addPartyMember(sessionId: string, member: PartyMember): Pr
   });
   if (!res.ok) {
     throw await engineError(res, "Could not join party");
+  }
+  return res.json();
+}
+
+export type PresenceUpdate = {
+  name: string;
+  mapX: number;
+  mapY: number;
+  viewedRoomId: string;
+  pickupClueId?: string;
+};
+
+export async function reportPresence(
+  sessionId: string,
+  body: PresenceUpdate,
+): Promise<GameSession> {
+  const res = await fetch(`/api/sessions/${sessionId}/presence`, {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw await engineError(res, "Could not update presence");
   }
   return res.json();
 }

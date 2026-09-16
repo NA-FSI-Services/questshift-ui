@@ -174,4 +174,23 @@ describe("TerminalPanel", () => {
     expect(screen.getByText(/accepted/)).toBeInTheDocument();
     expect(screen.queryByText(/Moss · ranger/)).not.toBeInTheDocument();
   });
+
+  it("shows the room description and collected clues", () => {
+    render(
+      <TerminalPanel
+        session={session}
+        busy={false}
+        roomTitle="The Broken Shell"
+        roomNarrative="A shell golem blocks the gate."
+        clues={[{ id: "shell-log", label: "scratched plaque", text: "/var/log/quest.log" }]}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/inside The Broken Shell/)).toBeInTheDocument();
+    expect(screen.getByText(/A shell golem blocks the gate/)).toBeInTheDocument();
+    expect(screen.getByText(/scratched plaque/)).toBeInTheDocument();
+    expect(screen.getByText(/\/var\/log\/quest\.log/)).toBeInTheDocument();
+  });
 });

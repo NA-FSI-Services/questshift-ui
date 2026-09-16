@@ -9,11 +9,14 @@ const exportSession = vi.fn();
 const getSession = vi.fn();
 const importSession = vi.fn();
 const addPartyMember = vi.fn();
+const reportPresence = vi.fn();
 const destroy = vi.fn();
 const emit = vi.fn();
+const on = vi.fn();
+const off = vi.fn();
 const createDungeonGame = vi.fn(() => ({
   destroy,
-  scene: { getScene: () => ({ events: { emit } }) },
+  scene: { getScene: () => ({ events: { emit, on, off } }) },
 }));
 
 vi.mock("./api/client", () => ({
@@ -24,6 +27,7 @@ vi.mock("./api/client", () => ({
   getSession: (...args: unknown[]) => getSession(...args),
   importSession: (...args: unknown[]) => importSession(...args),
   addPartyMember: (...args: unknown[]) => addPartyMember(...args),
+  reportPresence: (...args: unknown[]) => reportPresence(...args),
 }));
 
 vi.mock("./game/DungeonScene", () => ({
@@ -48,6 +52,8 @@ const campaign: Campaign = {
       mapX: 120,
       mapY: 220,
       puzzle_type: "linux",
+      narrative: "A shell golem blocks the gate.",
+      clues: [{ id: "shell-log", label: "plaque", text: "/var/log/quest.log", x: 280, y: 220 }],
     },
   ],
 };
@@ -78,7 +84,7 @@ describe("App", () => {
     vi.resetAllMocks();
     createDungeonGame.mockReturnValue({
       destroy,
-      scene: { getScene: () => ({ events: { emit } }) },
+      scene: { getScene: () => ({ events: { emit, on, off } }) },
     });
     listCampaigns.mockResolvedValue([campaign]);
     getSession.mockResolvedValue(session);

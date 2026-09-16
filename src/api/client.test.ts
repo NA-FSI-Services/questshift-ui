@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addPartyMember,
+  reportPresence,
   exportSession,
   getSession,
   importSession,
   listCampaigns,
+  reportPresence,
   startSession,
   submitCommand,
 } from "./client";
@@ -133,6 +135,33 @@ describe("engine client", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(member),
     });
+  });
+
+  it("reports presence and clue pickup", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => session,
+    } as Response);
+    const body = {
+      name: "Ada",
+      mapX: 450,
+      mapY: 360,
+      viewedRoomId: "room-01-broken-shell",
+      pickupClueId: "shell-log",
+    };
+    await expect(reportPresence("s1", body)).resolves.toEqual(session);
+    expect(fetch).toHaveBeenCalledWith("/api/sessions/s1/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  });
+
+  it("throws when presence fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
+    await expect(
+      reportPresence("s1", { name: "Ada", mapX: 1, mapY: 1, viewedRoomId: "" }),
+    ).rejects.toThrow("Could not update presence");
   });
 
   it("throws when get session fails", async () => {
