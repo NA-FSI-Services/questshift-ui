@@ -40,7 +40,6 @@ export function TerminalPanel({ session, busy, onCommand, onExport, onImport }: 
     if (!command || !session) {
       return;
     }
-    setLog((prev) => [...prev, { kind: "you", text: command }]);
     setDraft("");
     await onCommand(command);
   }
@@ -80,6 +79,20 @@ export function TerminalPanel({ session, busy, onCommand, onExport, onImport }: 
             {line.text}
           </pre>
         ))}
+        {(session?.commandLog ?? [])
+          .filter((row) => row.roomId === session?.currentRoomId)
+          .map((row, index) => (
+            <pre
+              key={`${row.name}-${row.command}-${index}`}
+              className={row.passed ? "board pass" : "board fail"}
+            >
+              $ {row.name} · {row.seatId}
+              {"\n"}
+              {row.command}
+              {"\n"}
+              {row.passed ? "accepted" : "failed"}
+            </pre>
+          ))}
         <div ref={endRef} />
       </div>
       <form onSubmit={onSubmit} className="prompt-row">

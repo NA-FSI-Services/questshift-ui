@@ -3,6 +3,15 @@ export type PartyMember = {
   seatId: string;
 };
 
+export type CommandLogEntry = {
+  roomId: string;
+  name: string;
+  seatId: string;
+  command: string;
+  passed: boolean;
+  message?: string;
+};
+
 export type GameSession = {
   id: string;
   joinCode?: string;
@@ -18,6 +27,7 @@ export type GameSession = {
   lastHint?: string;
   lastCanvasEvent?: string;
   yamlFallback?: boolean;
+  commandLog?: CommandLogEntry[];
 };
 
 export type CommandResult = {
@@ -90,11 +100,12 @@ export async function submitCommand(
   sessionId: string,
   command: string,
   seatId: string,
+  name: string,
 ): Promise<CommandResult> {
   const res = await fetch(`/api/sessions/${sessionId}/commands`, {
     method: "POST",
     headers: jsonHeaders,
-    body: JSON.stringify({ command, seatId }),
+    body: JSON.stringify({ command, seatId, name }),
   });
   if (!res.ok) {
     throw await engineError(res, "Command rejected by engine");

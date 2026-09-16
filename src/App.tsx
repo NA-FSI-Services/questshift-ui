@@ -232,7 +232,12 @@ export default function App() {
     }
     setBusy(true);
     try {
-      const result = await submitCommand(session.id, command, me?.seatId ?? "shared");
+      const result = await submitCommand(
+        session.id,
+        command,
+        me?.seatId ?? "shared",
+        me?.name ?? "",
+      );
       if (result.session.currentRoomId !== session.currentRoomId) {
         setMissed(false);
       } else {

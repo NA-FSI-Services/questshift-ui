@@ -85,12 +85,19 @@ describe("engine client", () => {
       ok: true,
       json: async () => result,
     } as Response);
-    await expect(submitCommand("s1", "ls", "shared")).resolves.toEqual(result);
+    await expect(submitCommand("s1", "ls", "shared", "Ada")).resolves.toEqual(result);
+    expect(fetch).toHaveBeenCalledWith("/api/sessions/s1/commands", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command: "ls", seatId: "shared", name: "Ada" }),
+    });
   });
 
   it("throws when the engine rejects a command", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
-    await expect(submitCommand("s1", "ls", "shared")).rejects.toThrow("Command rejected by engine");
+    await expect(submitCommand("s1", "ls", "shared", "Ada")).rejects.toThrow(
+      "Command rejected by engine",
+    );
   });
 
   it("exports yaml", async () => {

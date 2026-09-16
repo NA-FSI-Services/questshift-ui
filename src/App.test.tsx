@@ -159,7 +159,9 @@ describe("App", () => {
     await screen.findByText(/inventory: rune-thorn/);
     fireEvent.change(screen.getByLabelText("Command"), { target: { value: "grep rune" } });
     fireEvent.click(screen.getByRole("button", { name: "send" }));
-    await waitFor(() => expect(submitCommand).toHaveBeenCalledWith("s1", "grep rune", "guardian"));
+    await waitFor(() =>
+      expect(submitCommand).toHaveBeenCalledWith("s1", "grep rune", "guardian", "Ada"),
+    );
     expect(await screen.findByText(/rune-ash/)).toBeInTheDocument();
     expect(emit).toHaveBeenCalledWith(
       "board",

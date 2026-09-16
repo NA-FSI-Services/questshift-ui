@@ -246,6 +246,14 @@
   color: var(--muted);
 }
 
+.log .board {
+  color: #e8f8ea;
+}
+
+.log .board.fail {
+  color: #ffd0c4;
+}
+
 .prompt-row {
   display: grid;
   grid-template-columns: auto 1fr auto;

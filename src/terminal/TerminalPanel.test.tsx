@@ -131,4 +131,47 @@ describe("TerminalPanel", () => {
     await waitFor(() => expect(onImport).toHaveBeenCalledWith("id: restored\n"));
     expect(screen.getByText(/restored run.yaml/)).toBeInTheDocument();
   });
+
+  it("shows another player's command on the shared room board", () => {
+    render(
+      <TerminalPanel
+        session={{
+          ...session,
+          commandLog: [
+            {
+              roomId: "room-01-broken-shell",
+              name: "Linus",
+              seatId: "automancer",
+              command: "cat /var/log/quest.log",
+              passed: false,
+            },
+            {
+              roomId: "room-01-broken-shell",
+              name: "Ada",
+              seatId: "guardian",
+              command: "grep -i rune /var/log/quest.log | awk '{print $NF}'",
+              passed: true,
+            },
+            {
+              roomId: "room-02-playbook-of-binding",
+              name: "Moss",
+              seatId: "ranger",
+              command: "hosts: dungeon",
+              passed: true,
+            },
+          ],
+        }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Linus · automancer/)).toBeInTheDocument();
+    expect(screen.getByText(/cat \/var\/log\/quest\.log/)).toBeInTheDocument();
+    expect(screen.getByText(/failed/)).toBeInTheDocument();
+    expect(screen.getByText(/Ada · guardian/)).toBeInTheDocument();
+    expect(screen.getByText(/accepted/)).toBeInTheDocument();
+    expect(screen.queryByText(/Moss · ranger/)).not.toBeInTheDocument();
+  });
 });
