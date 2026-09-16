@@ -116,6 +116,49 @@
   cursor: pointer;
 }
 
+.topbar button[aria-busy="true"],
+.terminal button[aria-busy="true"] {
+  cursor: wait;
+}
+
+.busy-status {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0;
+  color: var(--amber);
+  flex: 0 1 auto;
+  font-size: 0.85rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid #2f5a3c;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -0.1rem;
+  margin-right: 0.4rem;
+}
+
+.busy-status .spinner {
+  margin-right: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
 .gm-offline {
   margin: 0;
   padding: 0.3rem 0.65rem;

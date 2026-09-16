@@ -36,6 +36,50 @@ describe("TerminalPanel", () => {
     expect(screen.getByText("--")).toBeInTheDocument();
   });
 
+  it("prints a wait line while a request is in flight", () => {
+    render(
+      <TerminalPanel
+        session={null}
+        busy
+        waitMessage="Starting the hour — waiting on the Game Master…"
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("# Starting the hour — waiting on the Game Master…"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("# QuestShift terminal.")).toBeInTheDocument();
+    expect(screen.queryByText(/Seats are cosmetic/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Anyone may solve/)).not.toBeInTheDocument();
+  });
+
+  it("shows only GM narrative, not puzzle JSON", () => {
+    render(
+      <TerminalPanel
+        session={{
+          ...session,
+          lastNarrative: `{
+  "narrative": "A shell golem blocks the gate.",
+  "puzzle_type": "linux",
+  "expected_command_pattern": "(?s).*awk.*\\$NF.*",
+  "hint": "Use grep.",
+  "canvas_event": "focus_room"
+}`,
+        }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/GM> A shell golem blocks the gate/)).toBeInTheDocument();
+    expect(screen.queryByText(/expected_command_pattern/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/puzzle_type/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/canvas_event/)).not.toBeInTheDocument();
+  });
+
   it("shows the clock, GM beat, and hint", () => {
     render(
       <TerminalPanel

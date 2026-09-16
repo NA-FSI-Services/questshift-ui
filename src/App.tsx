@@ -19,7 +19,13 @@ import "./App.css";
 
 const ME_KEY = "questshift-me";
 
+type Pending = "start" | "join" | "command" | "import" | null;
+
 type StoredMe = { sessionId: string; name: string; seatId: string };
+
+function BusyMark() {
+  return <span className="spinner" aria-hidden="true" />;
+}
 
 function readStoredMe(): StoredMe | null {
   try {
@@ -51,7 +57,7 @@ export default function App() {
   const [session, setSession] = useState<GameSession | null>(null);
   const [me, setMe] = useState<PartyMember | null>(null);
   const [missed, setMissed] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
   const [joinDraft, setJoinDraft] = useState("");
   const [seatId, setSeatId] = useState("guardian");
@@ -238,7 +244,7 @@ export default function App() {
       setError("Pick a character and a unique alias.");
       return;
     }
-    setBusy(true);
+    setPending("start");
     setError(null);
     setMissed(false);
     try {
@@ -252,7 +258,7 @@ export default function App() {
         }
       }
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
@@ -263,7 +269,7 @@ export default function App() {
     if (!code || !member.name || !isSeatId(member.seatId)) {
       return;
     }
-    setBusy(true);
+    setPending("join");
     setError(null);
     setMissed(false);
     try {
@@ -277,7 +283,7 @@ export default function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "join failed");
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
@@ -292,7 +298,7 @@ export default function App() {
     if (!session) {
       return;
     }
-    setBusy(true);
+    setPending("command");
     try {
       const result = await submitCommand(
         session.id,
@@ -309,7 +315,7 @@ export default function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "command failed");
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
@@ -328,7 +334,7 @@ export default function App() {
   }
 
   async function onImport(body: string) {
-    setBusy(true);
+    setPending("import");
     setError(null);
     setMissed(false);
     try {
@@ -346,9 +352,23 @@ export default function App() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "import failed");
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
+
+  const busy = pending !== null;
+  const waitMessage =
+    pending === "start"
+      ? "Starting the hour — waiting on the Game Master…"
+      : pending === "join"
+        ? "Joining party…"
+        : pending === "command"
+          ? "The Game Master is answering…"
+          : pending === "import"
+            ? "Restoring session…"
+            : null;
+  const startLabel =
+    pending === "start" ? "starting…" : session ? "new party" : "start 60-minute run";
 
   const liveMe = session?.partyMembers.find(
     (member) => member.name.trim().toLowerCase() === (me?.name ?? "").trim().toLowerCase(),
@@ -413,15 +433,38 @@ export default function App() {
                   disabled={busy}
                 />
               </label>
-              <button type="submit" disabled={busy || !joinDraft.trim() || !alias.trim()}>
-                Join
+              <button
+                type="submit"
+                disabled={busy || !joinDraft.trim() || !alias.trim()}
+                aria-busy={pending === "join"}
+              >
+                {pending === "join" ? (
+                  <>
+                    <BusyMark />
+                    joining…
+                  </>
+                ) : (
+                  "Join"
+                )}
               </button>
             </form>
           </>
         )}
-        <button type="button" onClick={() => void begin()} disabled={busy || !alias.trim()}>
-          {session ? "new party" : "start 60-minute run"}
+        <button
+          type="button"
+          onClick={() => void begin()}
+          disabled={busy || !alias.trim()}
+          aria-busy={pending === "start"}
+        >
+          {pending === "start" ? <BusyMark /> : null}
+          {startLabel}
         </button>
+        {waitMessage ? (
+          <p className="busy-status" role="status">
+            <BusyMark />
+            {waitMessage}
+          </p>
+        ) : null}
         {session?.yamlFallback ? (
           <p
             className="gm-offline"
@@ -475,6 +518,7 @@ export default function App() {
         <TerminalPanel
           session={session}
           busy={busy}
+          waitMessage={waitMessage}
           roomTitle={viewedRoom?.title}
           roomNarrative={viewedRoom?.narrative}
           clues={foundClueRows}

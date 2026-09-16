@@ -31,6 +31,7 @@ import {
   occupancySlot,
   placeWalkers,
 } from "../occupancy";
+import { bindWalkKeys } from "../walkKeys";
 
 export type DungeonNode = {
   id: string;
@@ -150,15 +151,17 @@ export class DungeonScene extends Phaser.Scene {
     this.focus = this.place("focus", 0, 0).setDepth(3).setVisible(false);
     this.game.canvas.setAttribute("tabindex", "0");
     this.game.canvas.setAttribute("aria-label", "Dungeon map");
-    this.input.keyboard?.disableGlobalCapture();
-    this.cursors = this.input.keyboard?.createCursorKeys();
-    this.keyW = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-    this.keyA = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-    this.keyS = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S);
-    this.keyD = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-    this.keyE = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-    this.keyEnter = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    this.keyEsc = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    if (this.input.keyboard) {
+      const keys = bindWalkKeys(this.input.keyboard);
+      this.cursors = keys.cursors as Phaser.Types.Input.Keyboard.CursorKeys;
+      this.keyW = keys.W as Phaser.Input.Keyboard.Key;
+      this.keyA = keys.A as Phaser.Input.Keyboard.Key;
+      this.keyS = keys.S as Phaser.Input.Keyboard.Key;
+      this.keyD = keys.D as Phaser.Input.Keyboard.Key;
+      this.keyE = keys.E as Phaser.Input.Keyboard.Key;
+      this.keyEnter = keys.Enter as Phaser.Input.Keyboard.Key;
+      this.keyEsc = keys.Esc as Phaser.Input.Keyboard.Key;
+    }
     this.events.on("board", (state: BoardState) => this.apply(state));
     this.apply({
       currentRoomId: "",
@@ -174,9 +177,6 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.input.keyboard) {
-      this.input.keyboard.enabled = this.canvasFocused();
-    }
     if (!this.board.meName || !this.canvasFocused()) {
       return;
     }

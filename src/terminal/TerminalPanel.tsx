@@ -1,11 +1,13 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import type { GameSession } from "../api/client";
+import { gmProse } from "./gmProse";
 
 type LogLine = { kind: "gm" | "you" | "sys"; text: string };
 
 type Props = {
   session: GameSession | null;
   busy: boolean;
+  waitMessage?: string | null;
   roomTitle?: string;
   roomNarrative?: string;
   clues?: { id: string; label: string; text: string }[];
@@ -17,6 +19,7 @@ type Props = {
 export function TerminalPanel({
   session,
   busy,
+  waitMessage,
   roomTitle,
   roomNarrative,
   clues,
@@ -25,21 +28,25 @@ export function TerminalPanel({
   onImport,
 }: Props) {
   const [draft, setDraft] = useState("");
-  const [log, setLog] = useState<LogLine[]>([
-    { kind: "sys", text: "QuestShift terminal. Seats are cosmetic. Anyone may solve." },
-  ]);
+  const [log, setLog] = useState<LogLine[]>([{ kind: "sys", text: "QuestShift terminal." }]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (session?.lastNarrative) {
-      setLog((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.text === session.lastNarrative) {
-          return prev;
-        }
-        return [...prev, { kind: "gm", text: session.lastNarrative ?? "" }];
-      });
+    setLog([{ kind: "sys", text: "QuestShift terminal." }]);
+  }, [session?.id]);
+
+  useEffect(() => {
+    const prose = gmProse(session?.lastNarrative);
+    if (!prose) {
+      return;
     }
+    setLog((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.text === prose) {
+        return prev;
+      }
+      return [...prev, { kind: "gm", text: prose }];
+    });
   }, [session?.lastNarrative, session?.id]);
 
   useEffect(() => {
@@ -97,6 +104,7 @@ export function TerminalPanel({
             {roomNarrative ? `\n${roomNarrative.trim()}` : ""}
           </pre>
         ) : null}
+        {waitMessage ? <pre className="sys"># {waitMessage}</pre> : null}
         {(clues ?? []).map((clue) => (
           <pre key={clue.id} className="clue">
             clue · {clue.label}
@@ -137,7 +145,11 @@ export function TerminalPanel({
             }
           }}
           placeholder={
-            session ? "type a command, YAML, oc, or Java snippet…" : "start a session first"
+            waitMessage
+              ? waitMessage
+              : session
+                ? "type a command, YAML, oc, or Java snippet…"
+                : "start a session first"
           }
           rows={3}
         />

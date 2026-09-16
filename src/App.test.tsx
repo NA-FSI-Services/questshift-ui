@@ -284,6 +284,30 @@ describe("App", () => {
     expect(writeText).toHaveBeenCalledWith("thorn-golem");
   });
 
+  it("shows a starting indicator while the Game Master answers", async () => {
+    let finish!: (value: GameSession) => void;
+    startSession.mockImplementation(
+      () =>
+        new Promise<GameSession>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Starting the hour — waiting on the Game Master…",
+    );
+    expect(screen.getByRole("button", { name: "starting…" })).toBeDisabled();
+    expect(
+      screen.getByText("# Starting the hour — waiting on the Game Master…"),
+    ).toBeInTheDocument();
+    finish(session);
+    expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
+    expect(screen.queryByText(/Starting the hour/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "new party" })).toBeInTheDocument();
+  });
+
   it("shows who is inside a named room on the roster and board", async () => {
     startSession.mockResolvedValue({
       ...session,
