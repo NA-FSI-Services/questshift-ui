@@ -26,6 +26,87 @@
   flex: 1;
 }
 
+.party-code {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex: 0 0 auto;
+  color: var(--amber);
+}
+
+.join-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex: 0 0 auto;
+}
+
+.join-form label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.join-form input {
+  background: #050a08;
+  color: var(--ink);
+  border: 1px solid #2a4a38;
+  padding: 0.35rem 0.5rem;
+  width: 9.5rem;
+}
+
+.party-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: baseline;
+  flex: 0 0 auto;
+}
+
+.seat-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.seat-picker legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.seat-pick {
+  font-size: 0.8rem;
+}
+
+.seat-pick.selected {
+  background: #1e4a30;
+  border-color: var(--accent);
+}
+
+.party-picker label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.party-picker input {
+  background: #050a08;
+  color: var(--ink);
+  border: 1px solid #2a4a38;
+  padding: 0.35rem 0.5rem;
+  width: 7.5rem;
+}
+
 .topbar button,
 .terminal button {
   background: #163221;

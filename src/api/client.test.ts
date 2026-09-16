@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  addPartyMember,
   exportSession,
   getSession,
   importSession,
@@ -10,6 +11,7 @@ import {
 
 const session = {
   id: "s1",
+  joinCode: "thorn-golem",
   campaignId: "devops-dungeon",
   status: "active",
   currentRoomId: "room-01-broken-shell",
@@ -61,6 +63,22 @@ describe("engine client", () => {
     await expect(startSession([])).rejects.toThrow("Could not start session");
   });
 
+  it("surfaces a 409 join code when a party is already running", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({
+        error: "party_active",
+        message: "A party is already running. Join with thorn-golem.",
+        joinCode: "thorn-golem",
+      }),
+    } as Response);
+    await expect(startSession([])).rejects.toMatchObject({
+      message: "A party is already running. Join with thorn-golem.",
+      joinCode: "thorn-golem",
+    });
+  });
+
   it("submits a command", async () => {
     const result = { passed: true, message: "ok", command: "ls", session };
     vi.mocked(fetch).mockResolvedValue({
@@ -96,9 +114,28 @@ describe("engine client", () => {
     await expect(getSession("s1")).resolves.toEqual(session);
   });
 
+  it("adds a party member", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => session,
+    } as Response);
+    const member = { name: "Linus", seatId: "automancer" };
+    await expect(addPartyMember("s1", member)).resolves.toEqual(session);
+    expect(fetch).toHaveBeenCalledWith("/api/sessions/s1/party", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(member),
+    });
+  });
+
   it("throws when get session fails", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
     await expect(getSession("s1")).rejects.toThrow("Could not load session");
+  });
+
+  it("maps a missing session to an unknown join code", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 404 } as Response);
+    await expect(getSession("nope")).rejects.toThrow("Unknown join code");
   });
 
   it("imports json when the body starts with a brace", async () => {

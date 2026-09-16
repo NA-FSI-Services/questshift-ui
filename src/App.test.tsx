@@ -8,6 +8,7 @@ const submitCommand = vi.fn();
 const exportSession = vi.fn();
 const getSession = vi.fn();
 const importSession = vi.fn();
+const addPartyMember = vi.fn();
 const destroy = vi.fn();
 const emit = vi.fn();
 const createDungeonGame = vi.fn(() => ({
@@ -22,6 +23,7 @@ vi.mock("./api/client", () => ({
   exportSession: (...args: unknown[]) => exportSession(...args),
   getSession: (...args: unknown[]) => getSession(...args),
   importSession: (...args: unknown[]) => importSession(...args),
+  addPartyMember: (...args: unknown[]) => addPartyMember(...args),
 }));
 
 vi.mock("./game/DungeonScene", () => ({
@@ -35,7 +37,10 @@ const campaign: Campaign = {
     title: "The Cluster That Forgot Its Name",
     durationMinutes: 60,
   },
-  seats: [{ id: "guardian", title: "Guardian", color: "#3d7a4a" }],
+  seats: [
+    { id: "guardian", title: "Guardian", color: "#3d7a4a" },
+    { id: "automancer", title: "Automancer", color: "#c45c26" },
+  ],
   rooms: [
     {
       id: "room-01-broken-shell",
@@ -49,11 +54,12 @@ const campaign: Campaign = {
 
 const session: GameSession = {
   id: "s1",
+  joinCode: "thorn-golem",
   campaignId: "devops-dungeon",
   status: "active",
   currentRoomId: "room-01-broken-shell",
   elapsedSeconds: 3,
-  partyMembers: [],
+  partyMembers: [{ name: "Ada", seatId: "guardian" }],
   inventory: ["rune-thorn"],
   skills: [],
   puzzleCompletion: { "room-01-broken-shell": false },
@@ -68,6 +74,7 @@ describe("App", () => {
   });
 
   beforeEach(() => {
+    sessionStorage.clear();
     vi.resetAllMocks();
     createDungeonGame.mockReturnValue({
       destroy,
@@ -75,6 +82,7 @@ describe("App", () => {
     });
     listCampaigns.mockResolvedValue([campaign]);
     getSession.mockResolvedValue(session);
+    addPartyMember.mockResolvedValue(session);
     URL.createObjectURL = vi.fn(() => "blob:test");
     URL.revokeObjectURL = vi.fn();
   });
@@ -86,8 +94,38 @@ describe("App", () => {
     expect(await screen.findByText("The Cluster That Forgot Its Name")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
-    expect(startSession).toHaveBeenCalled();
+    expect(startSession).toHaveBeenCalledWith([{ name: "Ada", seatId: "guardian" }]);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
+  });
+
+  it("joins an existing party by share code", async () => {
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.change(await screen.findByLabelText("Join code"), {
+      target: { value: "THORN-GOLEM" },
+    });
+    await waitFor(() => expect(screen.getByLabelText("Alias")).toHaveValue("Briar"));
+    fireEvent.click(screen.getByRole("button", { name: "Join" }));
+    expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
+    expect(getSession).toHaveBeenCalledWith("THORN-GOLEM");
+    expect(addPartyMember).toHaveBeenCalledWith("s1", { name: "Briar", seatId: "guardian" });
+    expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
+  });
+
+  it("shows the live join code when Start is refused", async () => {
+    startSession.mockRejectedValue(
+      Object.assign(new Error("A party is already running. Join with thorn-golem."), {
+        joinCode: "thorn-golem",
+      }),
+    );
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(
+      await screen.findByText("A party is already running. Join with thorn-golem."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Join code")).toHaveValue("thorn-golem");
   });
 
   it("shows a Game Master offline chip when the engine reports YAML fallback", async () => {
@@ -121,7 +159,7 @@ describe("App", () => {
     await screen.findByText(/inventory: rune-thorn/);
     fireEvent.change(screen.getByLabelText("Command"), { target: { value: "grep rune" } });
     fireEvent.click(screen.getByRole("button", { name: "send" }));
-    await waitFor(() => expect(submitCommand).toHaveBeenCalledWith("s1", "grep rune", "shared"));
+    await waitFor(() => expect(submitCommand).toHaveBeenCalledWith("s1", "grep rune", "guardian"));
     expect(await screen.findByText(/rune-ash/)).toBeInTheDocument();
     expect(emit).toHaveBeenCalledWith(
       "board",
@@ -185,5 +223,31 @@ describe("App", () => {
     fireEvent.change(input, { target: { files: [file] } });
     await waitFor(() => expect(importSession).toHaveBeenCalled());
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
+  });
+
+  it("starts with the picked character and typed alias", async () => {
+    startSession.mockResolvedValue({
+      ...session,
+      partyMembers: [{ name: "Forge", seatId: "automancer" }],
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Automancer" }));
+    await waitFor(() => expect(screen.getByLabelText("Alias")).toHaveValue("Linus"));
+    fireEvent.change(screen.getByLabelText("Alias"), { target: { value: "Forge" } });
+    fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
+    expect(startSession).toHaveBeenCalledWith([{ name: "Forge", seatId: "automancer" }]);
+  });
+
+  it("copies the live join code", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    startSession.mockResolvedValue(session);
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Copy code" }));
+    expect(writeText).toHaveBeenCalledWith("thorn-golem");
   });
 });
