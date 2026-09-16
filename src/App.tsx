@@ -12,7 +12,11 @@ import {
   type GameSession,
   type PartyMember,
 } from "./api/client";
-import { createDungeonGame, DungeonScene, type PresencePayload } from "./game/DungeonScene";
+import {
+  createDungeonGame,
+  DungeonScene,
+  type PresencePayload,
+} from "./game/DungeonScene";
 import { isSeatId, suggestAlias } from "./party";
 import { TerminalPanel } from "./terminal/TerminalPanel";
 import "./App.css";
@@ -58,9 +62,11 @@ export default function App() {
   const [alias, setAlias] = useState(() => suggestAlias("guardian", []));
   const [aliasTouched, setAliasTouched] = useState(false);
   const [takenAliases, setTakenAliases] = useState<string[]>([]);
-  const [pose, setPose] = useState<{ mapX: number; mapY: number; viewedRoomId: string } | null>(
-    null,
-  );
+  const [pose, setPose] = useState<{
+    mapX: number;
+    mapY: number;
+    viewedRoomId: string;
+  } | null>(null);
   const sessionRef = useRef<GameSession | null>(null);
   const meRef = useRef<PartyMember | null>(null);
 
@@ -95,7 +101,8 @@ export default function App() {
     void getSession(stored.sessionId)
       .then((live) => {
         const member = live.partyMembers.find(
-          (item) => item.name.trim().toLowerCase() === stored.name.trim().toLowerCase(),
+          (item) =>
+            item.name.trim().toLowerCase() === stored.name.trim().toLowerCase(),
         );
         if (!member) {
           return;
@@ -112,7 +119,9 @@ export default function App() {
     }
     gameRef.current?.destroy(true);
     gameRef.current = createDungeonGame(hostRef.current, nodes);
-    const scene = gameRef.current.scene.getScene("dungeon") as DungeonScene | null;
+    const scene = gameRef.current.scene.getScene(
+      "dungeon",
+    ) as DungeonScene | null;
     const onPresence = (payload: PresencePayload) => {
       setPose({
         mapX: payload.mapX,
@@ -140,7 +149,9 @@ export default function App() {
     if (!session || !gameRef.current) {
       return;
     }
-    const scene = gameRef.current.scene.getScene("dungeon") as DungeonScene | null;
+    const scene = gameRef.current.scene.getScene(
+      "dungeon",
+    ) as DungeonScene | null;
     scene?.events.emit("board", {
       currentRoomId: session.currentRoomId,
       completed: session.puzzleCompletion,
@@ -148,7 +159,9 @@ export default function App() {
       seats: campaign?.seats ?? [],
       members: session.partyMembers.map((member) => {
         const self =
-          Boolean(me) && member.name.trim().toLowerCase() === (me?.name ?? "").trim().toLowerCase();
+          Boolean(me) &&
+          member.name.trim().toLowerCase() ===
+            (me?.name ?? "").trim().toLowerCase();
         if (self && pose) {
           return {
             name: member.name,
@@ -269,7 +282,8 @@ export default function App() {
       const joined = await addPartyMember(live.id, member);
       const mine =
         joined.partyMembers.find(
-          (item) => item.name.trim().toLowerCase() === member.name.toLowerCase(),
+          (item) =>
+            item.name.trim().toLowerCase() === member.name.toLowerCase(),
         ) ?? member;
       claim(joined, mine);
     } catch (err) {
@@ -335,7 +349,9 @@ export default function App() {
       const stored = readStoredMe();
       const mine =
         live.partyMembers.find(
-          (item) => stored && item.name.trim().toLowerCase() === stored.name.trim().toLowerCase(),
+          (item) =>
+            stored &&
+            item.name.trim().toLowerCase() === stored.name.trim().toLowerCase(),
         ) ?? live.partyMembers[0];
       if (mine) {
         setMe(mine);
@@ -349,7 +365,9 @@ export default function App() {
   }
 
   const liveMe = session?.partyMembers.find(
-    (member) => member.name.trim().toLowerCase() === (me?.name ?? "").trim().toLowerCase(),
+    (member) =>
+      member.name.trim().toLowerCase() ===
+      (me?.name ?? "").trim().toLowerCase(),
   );
   const viewedRoomId = pose?.viewedRoomId || liveMe?.viewedRoomId || "";
   const viewedRoom = campaign?.rooms.find((room) => room.id === viewedRoomId);
@@ -378,7 +396,9 @@ export default function App() {
                   <button
                     key={seat.id}
                     type="button"
-                    className={seatId === seat.id ? "seat-pick selected" : "seat-pick"}
+                    className={
+                      seatId === seat.id ? "seat-pick selected" : "seat-pick"
+                    }
                     aria-pressed={seatId === seat.id}
                     disabled={busy}
                     onClick={() => setSeatId(seat.id)}
@@ -411,13 +431,20 @@ export default function App() {
                   disabled={busy}
                 />
               </label>
-              <button type="submit" disabled={busy || !joinDraft.trim() || !alias.trim()}>
+              <button
+                type="submit"
+                disabled={busy || !joinDraft.trim() || !alias.trim()}
+              >
                 Join
               </button>
             </form>
           </>
         )}
-        <button type="button" onClick={() => void begin()} disabled={busy || !alias.trim()}>
+        <button
+          type="button"
+          onClick={() => void begin()}
+          disabled={busy || !alias.trim()}
+        >
           {session ? "new party" : "start 60-minute run"}
         </button>
         {session?.yamlFallback ? (
@@ -437,23 +464,32 @@ export default function App() {
             ref={hostRef}
             className="phaser-host"
             tabIndex={0}
-            onPointerDown={(event) => event.currentTarget.querySelector("canvas")?.focus()}
+            onPointerDown={(event) =>
+              event.currentTarget.querySelector("canvas")?.focus()
+            }
           />
           <p className="map-help">
-            Click the map, then WASD or arrows to walk. E or Enter enters a room or picks a clue.
-            Esc leaves the room.
+            Click the map, then WASD or arrows to walk. E or Enter enters a room
+            or picks a clue. Esc leaves the room.
           </p>
           <ul className="seats">
-            {(session?.partyMembers?.length ? session.partyMembers : []).map((member) => {
-              const seat = campaign?.seats.find((item) => item.id === member.seatId);
-              return (
-                <li key={`${member.seatId}-${member.name}`}>
-                  <i style={{ background: seat?.color ?? "#7f9a86" }} />
-                  {member.name}
-                  {seat ? ` · ${seat.title}` : ""}
-                </li>
-              );
-            })}
+            {(session?.partyMembers?.length ? session.partyMembers : []).map(
+              (member) => {
+                const seat = campaign?.seats.find(
+                  (item) => item.id === member.seatId,
+                );
+                const inside = (member.viewedRoomId ?? "").trim();
+                const room = campaign?.rooms.find((item) => item.id === inside);
+                return (
+                  <li key={`${member.seatId}-${member.name}`}>
+                    <i style={{ background: seat?.color ?? "#7f9a86" }} />
+                    {member.name}
+                    {seat ? ` · ${seat.title}` : ""}
+                    {room ? ` · in ${room.title}` : ""}
+                  </li>
+                );
+              },
+            )}
             {!session
               ? (campaign?.seats ?? []).map((seat) => (
                   <li key={seat.id}>
@@ -464,7 +500,9 @@ export default function App() {
               : null}
           </ul>
           {session ? (
-            <p className="loot">inventory: {session.inventory.join(", ") || "empty"}</p>
+            <p className="loot">
+              inventory: {session.inventory.join(", ") || "empty"}
+            </p>
           ) : null}
         </section>
         <TerminalPanel

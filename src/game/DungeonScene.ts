@@ -24,6 +24,13 @@ import {
   TINY_DUNGEON_SHEET,
   type SpriteKey,
 } from "../sprites";
+import {
+  ALIAS_TEXT_STYLE,
+  aliasLabelOffset,
+  occupantsByRoom,
+  occupancySlot,
+  placeWalkers,
+} from "../occupancy";
 
 export type DungeonNode = {
   id: string;
@@ -75,11 +82,12 @@ export class DungeonScene extends Phaser.Scene {
   private rooms = new Map<string, Phaser.GameObjects.Image>();
   private gems = new Map<string, Phaser.GameObjects.Image>();
   private labels: Phaser.GameObjects.Text[] = [];
-  private party: Phaser.GameObjects.Image[] = [];
+  private party: Phaser.GameObjects.GameObject[] = [];
   private loot: Phaser.GameObjects.Image[] = [];
   private interior: Phaser.GameObjects.GameObject[] = [];
   private focus?: Phaser.GameObjects.Image;
   private meSprite?: Phaser.GameObjects.Image;
+  private meLabel?: Phaser.GameObjects.Text;
   private board: BoardState = {
     currentRoomId: "",
     completed: {},
@@ -114,17 +122,27 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet(SPRITESHEET_LOAD.key, SPRITESHEET_LOAD.url, SPRITESHEET_LOAD.frameConfig);
+    this.load.spritesheet(
+      SPRITESHEET_LOAD.key,
+      SPRITESHEET_LOAD.url,
+      SPRITESHEET_LOAD.frameConfig,
+    );
   }
 
   create() {
     this.cameras.main.setBackgroundColor("#101714");
     this.drawTiles();
     this.nodes.forEach((node) => {
-      const room = this.hotspot(roomSpriteKey(node.id), node.x, node.y).setDepth(1);
+      const room = this.hotspot(
+        roomSpriteKey(node.id),
+        node.x,
+        node.y,
+      ).setDepth(1);
       room.on("pointerdown", () => this.tryEnter(node.id));
       this.rooms.set(node.id, room);
-      const gem = this.place("gem_locked", node.x + 28, node.y - 40).setDepth(2);
+      const gem = this.place("gem_locked", node.x + 28, node.y - 40).setDepth(
+        2,
+      );
       this.gems.set(node.id, gem);
       this.labels.push(
         this.add
@@ -149,8 +167,12 @@ export class DungeonScene extends Phaser.Scene {
     this.keyS = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     this.keyD = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     this.keyE = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-    this.keyEnter = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    this.keyEsc = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.keyEnter = this.input.keyboard?.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ENTER,
+    );
+    this.keyEsc = this.input.keyboard?.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ESC,
+    );
     this.events.on("board", (state: BoardState) => this.apply(state));
     this.apply({
       currentRoomId: "",
@@ -190,7 +212,7 @@ export class DungeonScene extends Phaser.Scene {
       const next = stepToward(this.localX, this.localY, dx, dy);
       this.localX = next.x;
       this.localY = next.y;
-      this.meSprite?.setPosition(this.localX, this.localY);
+      this.poseSelf();
       this.emitPresence(false);
     }
     if (
@@ -219,7 +241,8 @@ export class DungeonScene extends Phaser.Scene {
       }
       room.setVisible(!interior);
       gem.setVisible(!interior);
-      const current = Boolean(state.currentRoomId) && state.currentRoomId === node.id;
+      const current =
+        Boolean(state.currentRoomId) && state.currentRoomId === node.id;
       gem.setFrame(
         frameFor(
           gemKeyFor({
@@ -252,7 +275,8 @@ export class DungeonScene extends Phaser.Scene {
       }
     }
     const mine = state.members.find(
-      (member) => member.name.trim().toLowerCase() === state.meName.trim().toLowerCase(),
+      (member) =>
+        member.name.trim().toLowerCase() === state.meName.trim().toLowerCase(),
     );
     if (mine && !this.posed) {
       this.localX = mine.mapX;
@@ -273,7 +297,13 @@ export class DungeonScene extends Phaser.Scene {
       if (!key) {
         return;
       }
-      this.loot.push(this.place(key, TILE_DISPLAY * 1.5 + index * TILE_DISPLAY, lootY).setDepth(5));
+      this.loot.push(
+        this.place(
+          key,
+          TILE_DISPLAY * 1.5 + index * TILE_DISPLAY,
+          lootY,
+        ).setDepth(5),
+      );
     });
   }
 
@@ -281,49 +311,100 @@ export class DungeonScene extends Phaser.Scene {
     this.party.forEach((sprite) => sprite.destroy());
     this.party = [];
     this.meSprite = undefined;
+    this.meLabel = undefined;
     const view = this.localViewed;
-    if (state.meName) {
-      const mine =
-        state.members.find(
-          (member) => member.name.trim().toLowerCase() === state.meName.trim().toLowerCase(),
-        ) ?? state.members[0];
-      const key = seatSpriteKey(mine?.seatId ?? "");
-      if (key) {
-        this.meSprite = this.place(key, this.localX, this.localY).setDepth(7);
-        this.party.push(this.meSprite);
-      }
-    } else if (!view) {
-      const parked = this.nodes[0];
-      const offsets = [
-        { x: -72, y: 52 },
-        { x: -32, y: 52 },
-        { x: 8, y: 52 },
-        { x: 48, y: 52 },
-      ];
-      if (parked) {
-        state.seats.forEach((seat, index) => {
-          const key = seatSpriteKey(seat.id);
-          if (!key) {
-            return;
-          }
-          const spot = offsets[index] ?? offsets[0];
-          this.party.push(this.place(key, parked.x + spot.x, parked.y + spot.y).setDepth(4));
-        });
-      }
+    if (!state.meName && !view) {
+      this.drawParkedSeats(state);
+      return;
     }
-    state.members.forEach((member) => {
-      if (member.name.trim().toLowerCase() === state.meName.trim().toLowerCase()) {
-        return;
-      }
-      if ((member.viewedRoomId ?? "") !== view) {
-        return;
-      }
-      const key = seatSpriteKey(member.seatId);
+    const members = state.members.map((member) => {
+      const self =
+        member.name.trim().toLowerCase() === state.meName.trim().toLowerCase();
+      return {
+        name: member.name,
+        seatId: member.seatId,
+        mapX: self ? this.localX : member.mapX,
+        mapY: self ? this.localY : member.mapY,
+        viewedRoomId: self ? view : (member.viewedRoomId ?? ""),
+      };
+    });
+    placeWalkers(members, view, state.meName).forEach((walker) => {
+      const key = seatSpriteKey(walker.seatId);
       if (!key) {
         return;
       }
-      this.party.push(this.place(key, member.mapX, member.mapY).setDepth(4));
+      const depth = walker.self ? 7 : 4;
+      const sprite = this.place(key, walker.x, walker.y).setDepth(depth);
+      const label = this.aliasText(walker.x, walker.y, walker.name, depth + 1);
+      this.party.push(sprite, label);
+      if (walker.self) {
+        this.meSprite = sprite;
+        this.meLabel = label;
+      }
     });
+    if (view) {
+      return;
+    }
+    occupantsByRoom(members, view).forEach((group) => {
+      const node = this.nodes.find((item) => item.id === group.roomId);
+      if (!node) {
+        return;
+      }
+      group.occupants.forEach((occupant, index) => {
+        const slot = occupancySlot(
+          node.x,
+          node.y,
+          index,
+          group.occupants.length,
+        );
+        const key = seatSpriteKey(occupant.seatId);
+        if (key) {
+          this.party.push(
+            this.place(key, slot.x, slot.y)
+              .setScale(SPRITE_SCALE * 0.67)
+              .setDepth(5),
+          );
+        }
+        this.party.push(this.aliasText(slot.x, slot.y, occupant.name, 6));
+      });
+    });
+  }
+
+  private drawParkedSeats(state: BoardState) {
+    const parked = this.nodes[0];
+    const offsets = [
+      { x: -72, y: 52 },
+      { x: -32, y: 52 },
+      { x: 8, y: 52 },
+      { x: 48, y: 52 },
+    ];
+    if (!parked) {
+      return;
+    }
+    state.seats.forEach((seat, index) => {
+      const key = seatSpriteKey(seat.id);
+      if (!key) {
+        return;
+      }
+      const spot = offsets[index] ?? offsets[0];
+      this.party.push(
+        this.place(key, parked.x + spot.x, parked.y + spot.y).setDepth(4),
+      );
+    });
+  }
+
+  private poseSelf() {
+    this.meSprite?.setPosition(this.localX, this.localY);
+    const off = aliasLabelOffset();
+    this.meLabel?.setPosition(this.localX + off.x, this.localY + off.y);
+  }
+
+  private aliasText(x: number, y: number, name: string, depth: number) {
+    const off = aliasLabelOffset();
+    return this.add
+      .text(x + off.x, y + off.y, name, ALIAS_TEXT_STYLE)
+      .setOrigin(0.5, 1)
+      .setDepth(depth);
   }
 
   private drawInterior(state: BoardState) {
@@ -343,11 +424,19 @@ export class DungeonScene extends Phaser.Scene {
         .setOrigin(0.5, 0)
         .setDepth(8),
     );
-    const door = this.hotspot("door", INTERIOR_DOOR.x, INTERIOR_DOOR.y).setDepth(4);
+    const door = this.hotspot(
+      "door",
+      INTERIOR_DOOR.x,
+      INTERIOR_DOOR.y,
+    ).setDepth(4);
     door.on("pointerdown", () => this.leaveRoom());
     this.interior.push(door);
     state.clues
-      .filter((clue) => clue.roomId === this.localViewed && !state.foundClues.includes(clue.id))
+      .filter(
+        (clue) =>
+          clue.roomId === this.localViewed &&
+          !state.foundClues.includes(clue.id),
+      )
       .forEach((clue) => {
         const chest = this.hotspot("clue", clue.x, clue.y).setDepth(4);
         chest.on("pointerdown", () => this.pickClue(clue.id));
@@ -361,8 +450,15 @@ export class DungeonScene extends Phaser.Scene {
         this.leaveRoom();
         return;
       }
-      const roomClues = this.board.clues.filter((clue) => clue.roomId === this.localViewed);
-      const clue = clueInReach(this.localX, this.localY, roomClues, this.board.foundClues);
+      const roomClues = this.board.clues.filter(
+        (clue) => clue.roomId === this.localViewed,
+      );
+      const clue = clueInReach(
+        this.localX,
+        this.localY,
+        roomClues,
+        this.board.foundClues,
+      );
       if (clue) {
         this.pickClue(clue.id);
       }
@@ -390,7 +486,7 @@ export class DungeonScene extends Phaser.Scene {
     this.localViewed = roomId;
     this.localX = INTERIOR_SPAWN.x;
     this.localY = INTERIOR_SPAWN.y;
-    this.meSprite?.setPosition(this.localX, this.localY);
+    this.poseSelf();
     this.apply(this.board);
     this.emitPresence(true);
   }
@@ -399,7 +495,10 @@ export class DungeonScene extends Phaser.Scene {
     if (!this.localViewed || this.board.foundClues.includes(clueId)) {
       return;
     }
-    this.board = { ...this.board, foundClues: [...this.board.foundClues, clueId] };
+    this.board = {
+      ...this.board,
+      foundClues: [...this.board.foundClues, clueId],
+    };
     this.drawInterior(this.board);
     this.emitPresence(true, clueId);
   }
@@ -414,7 +513,7 @@ export class DungeonScene extends Phaser.Scene {
       const spawn = overworldSpawn(node);
       this.localX = spawn.x;
       this.localY = spawn.y;
-      this.meSprite?.setPosition(this.localX, this.localY);
+      this.poseSelf();
     }
     this.apply(this.board);
     this.emitPresence(true);
@@ -452,7 +551,8 @@ export class DungeonScene extends Phaser.Scene {
     const rows = Math.ceil(CANVAS_HEIGHT / TILE_DISPLAY);
     for (let row = 0; row < rows; row += 1) {
       for (let col = 0; col < cols; col += 1) {
-        const edge = row === 0 || col === 0 || row === rows - 1 || col === cols - 1;
+        const edge =
+          row === 0 || col === 0 || row === rows - 1 || col === cols - 1;
         this.add
           .image(
             col * TILE_DISPLAY,
@@ -476,7 +576,12 @@ export class DungeonScene extends Phaser.Scene {
 
   private hotspot(key: SpriteKey, x: number, y: number) {
     return this.place(key, x, y).setInteractive(
-      new Phaser.Geom.Rectangle(-TILE_DISPLAY / 2, -TILE_DISPLAY / 2, TILE_DISPLAY, TILE_DISPLAY),
+      new Phaser.Geom.Rectangle(
+        -TILE_DISPLAY / 2,
+        -TILE_DISPLAY / 2,
+        TILE_DISPLAY,
+        TILE_DISPLAY,
+      ),
       Phaser.Geom.Rectangle.Contains,
     );
   }
