@@ -92,6 +92,7 @@ describe("App", () => {
     vi.resetAllMocks();
     createDungeonGame.mockReturnValue({
       destroy,
+      events: { emit, on, off },
       scene: { getScene: () => ({ events: { emit, on, off } }) },
     });
     listCampaigns.mockResolvedValue([campaign]);
@@ -341,6 +342,35 @@ describe("App", () => {
             viewedRoomId: "room-01-broken-shell",
           }),
         ]),
+      }),
+    );
+  });
+
+  it("posts walks so another browser can see the alias move", async () => {
+    startSession.mockResolvedValue(session);
+    reportPresence.mockResolvedValue({
+      ...session,
+      partyMembers: [{ name: "Ada", seatId: "guardian", mapX: 200, mapY: 250, viewedRoomId: "" }],
+    });
+    let presence:
+      ((payload: { mapX: number; mapY: number; viewedRoomId: string }) => void) | undefined;
+    on.mockImplementation((event: string, handler: unknown) => {
+      if (event === "presence") {
+        presence = handler as typeof presence;
+      }
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    expect(presence).toBeDefined();
+    presence?.({ mapX: 200, mapY: 250, viewedRoomId: "" });
+    await waitFor(() =>
+      expect(reportPresence).toHaveBeenCalledWith("s1", {
+        name: "Ada",
+        mapX: 200,
+        mapY: 250,
+        viewedRoomId: "",
       }),
     );
   });

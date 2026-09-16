@@ -14,6 +14,7 @@ import {
 } from "./api/client";
 import { createDungeonGame, DungeonScene, type PresencePayload } from "./game/DungeonScene";
 import { isSeatId, suggestAlias } from "./party";
+import { bindPresence } from "./presenceBind";
 import { TerminalPanel } from "./terminal/TerminalPanel";
 import "./App.css";
 
@@ -119,8 +120,8 @@ export default function App() {
       return;
     }
     gameRef.current?.destroy(true);
-    gameRef.current = createDungeonGame(hostRef.current, nodes);
-    const scene = gameRef.current.scene.getScene("dungeon") as DungeonScene | null;
+    const game = createDungeonGame(hostRef.current, nodes);
+    gameRef.current = game;
     const onPresence = (payload: PresencePayload) => {
       setPose({
         mapX: payload.mapX,
@@ -136,10 +137,10 @@ export default function App() {
         .then(setSession)
         .catch(() => undefined);
     };
-    scene?.events.on("presence", onPresence);
+    const unbindPresence = bindPresence(game, onPresence);
     return () => {
-      scene?.events.off("presence", onPresence);
-      gameRef.current?.destroy(true);
+      unbindPresence();
+      game.destroy(true);
       gameRef.current = null;
     };
   }, [nodes]);
@@ -232,6 +233,8 @@ export default function App() {
   }, [seatId, takenAliases, aliasTouched]);
 
   function claim(live: GameSession, member: PartyMember) {
+    sessionRef.current = live;
+    meRef.current = member;
     setPose(null);
     setSession(live);
     setMe(member);

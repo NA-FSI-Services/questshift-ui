@@ -489,6 +489,7 @@ export class DungeonScene extends Phaser.Scene {
       payload.pickupClueId = pickupClueId;
     }
     this.events.emit("presence", payload);
+    this.game.events.emit("presence", payload);
   }
 
   private canvasFocused(): boolean {
