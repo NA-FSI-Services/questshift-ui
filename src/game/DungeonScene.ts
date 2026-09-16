@@ -24,6 +24,13 @@ import {
   TINY_DUNGEON_SHEET,
   type SpriteKey,
 } from "../sprites";
+import {
+  ALIAS_TEXT_STYLE,
+  aliasLabelOffset,
+  occupantsByRoom,
+  occupancySlot,
+  placeWalkers,
+} from "../occupancy";
 
 export type DungeonNode = {
   id: string;
@@ -75,11 +82,12 @@ export class DungeonScene extends Phaser.Scene {
   private rooms = new Map<string, Phaser.GameObjects.Image>();
   private gems = new Map<string, Phaser.GameObjects.Image>();
   private labels: Phaser.GameObjects.Text[] = [];
-  private party: Phaser.GameObjects.Image[] = [];
+  private party: Phaser.GameObjects.GameObject[] = [];
   private loot: Phaser.GameObjects.Image[] = [];
   private interior: Phaser.GameObjects.GameObject[] = [];
   private focus?: Phaser.GameObjects.Image;
   private meSprite?: Phaser.GameObjects.Image;
+  private meLabel?: Phaser.GameObjects.Text;
   private board: BoardState = {
     currentRoomId: "",
     completed: {},
@@ -190,7 +198,7 @@ export class DungeonScene extends Phaser.Scene {
       const next = stepToward(this.localX, this.localY, dx, dy);
       this.localX = next.x;
       this.localY = next.y;
-      this.meSprite?.setPosition(this.localX, this.localY);
+      this.poseSelf();
       this.emitPresence(false);
     }
     if (
@@ -281,49 +289,92 @@ export class DungeonScene extends Phaser.Scene {
     this.party.forEach((sprite) => sprite.destroy());
     this.party = [];
     this.meSprite = undefined;
+    this.meLabel = undefined;
     const view = this.localViewed;
-    if (state.meName) {
-      const mine =
-        state.members.find(
-          (member) => member.name.trim().toLowerCase() === state.meName.trim().toLowerCase(),
-        ) ?? state.members[0];
-      const key = seatSpriteKey(mine?.seatId ?? "");
-      if (key) {
-        this.meSprite = this.place(key, this.localX, this.localY).setDepth(7);
-        this.party.push(this.meSprite);
-      }
-    } else if (!view) {
-      const parked = this.nodes[0];
-      const offsets = [
-        { x: -72, y: 52 },
-        { x: -32, y: 52 },
-        { x: 8, y: 52 },
-        { x: 48, y: 52 },
-      ];
-      if (parked) {
-        state.seats.forEach((seat, index) => {
-          const key = seatSpriteKey(seat.id);
-          if (!key) {
-            return;
-          }
-          const spot = offsets[index] ?? offsets[0];
-          this.party.push(this.place(key, parked.x + spot.x, parked.y + spot.y).setDepth(4));
-        });
-      }
+    if (!state.meName && !view) {
+      this.drawParkedSeats(state);
+      return;
     }
-    state.members.forEach((member) => {
-      if (member.name.trim().toLowerCase() === state.meName.trim().toLowerCase()) {
-        return;
-      }
-      if ((member.viewedRoomId ?? "") !== view) {
-        return;
-      }
-      const key = seatSpriteKey(member.seatId);
+    const members = state.members.map((member) => {
+      const self = member.name.trim().toLowerCase() === state.meName.trim().toLowerCase();
+      return {
+        name: member.name,
+        seatId: member.seatId,
+        mapX: self ? this.localX : member.mapX,
+        mapY: self ? this.localY : member.mapY,
+        viewedRoomId: self ? view : (member.viewedRoomId ?? ""),
+      };
+    });
+    placeWalkers(members, view, state.meName).forEach((walker) => {
+      const key = seatSpriteKey(walker.seatId);
       if (!key) {
         return;
       }
-      this.party.push(this.place(key, member.mapX, member.mapY).setDepth(4));
+      const depth = walker.self ? 7 : 4;
+      const sprite = this.place(key, walker.x, walker.y).setDepth(depth);
+      const label = this.aliasText(walker.x, walker.y, walker.name, depth + 1);
+      this.party.push(sprite, label);
+      if (walker.self) {
+        this.meSprite = sprite;
+        this.meLabel = label;
+      }
     });
+    if (view) {
+      return;
+    }
+    occupantsByRoom(members, view).forEach((group) => {
+      const node = this.nodes.find((item) => item.id === group.roomId);
+      if (!node) {
+        return;
+      }
+      group.occupants.forEach((occupant, index) => {
+        const slot = occupancySlot(node.x, node.y, index, group.occupants.length);
+        const key = seatSpriteKey(occupant.seatId);
+        if (key) {
+          this.party.push(
+            this.place(key, slot.x, slot.y)
+              .setScale(SPRITE_SCALE * 0.67)
+              .setDepth(5),
+          );
+        }
+        this.party.push(this.aliasText(slot.x, slot.y, occupant.name, 6));
+      });
+    });
+  }
+
+  private drawParkedSeats(state: BoardState) {
+    const parked = this.nodes[0];
+    const offsets = [
+      { x: -72, y: 52 },
+      { x: -32, y: 52 },
+      { x: 8, y: 52 },
+      { x: 48, y: 52 },
+    ];
+    if (!parked) {
+      return;
+    }
+    state.seats.forEach((seat, index) => {
+      const key = seatSpriteKey(seat.id);
+      if (!key) {
+        return;
+      }
+      const spot = offsets[index] ?? offsets[0];
+      this.party.push(this.place(key, parked.x + spot.x, parked.y + spot.y).setDepth(4));
+    });
+  }
+
+  private poseSelf() {
+    this.meSprite?.setPosition(this.localX, this.localY);
+    const off = aliasLabelOffset();
+    this.meLabel?.setPosition(this.localX + off.x, this.localY + off.y);
+  }
+
+  private aliasText(x: number, y: number, name: string, depth: number) {
+    const off = aliasLabelOffset();
+    return this.add
+      .text(x + off.x, y + off.y, name, ALIAS_TEXT_STYLE)
+      .setOrigin(0.5, 1)
+      .setDepth(depth);
   }
 
   private drawInterior(state: BoardState) {
@@ -390,7 +441,7 @@ export class DungeonScene extends Phaser.Scene {
     this.localViewed = roomId;
     this.localX = INTERIOR_SPAWN.x;
     this.localY = INTERIOR_SPAWN.y;
-    this.meSprite?.setPosition(this.localX, this.localY);
+    this.poseSelf();
     this.apply(this.board);
     this.emitPresence(true);
   }
@@ -399,7 +450,10 @@ export class DungeonScene extends Phaser.Scene {
     if (!this.localViewed || this.board.foundClues.includes(clueId)) {
       return;
     }
-    this.board = { ...this.board, foundClues: [...this.board.foundClues, clueId] };
+    this.board = {
+      ...this.board,
+      foundClues: [...this.board.foundClues, clueId],
+    };
     this.drawInterior(this.board);
     this.emitPresence(true, clueId);
   }
@@ -414,7 +468,7 @@ export class DungeonScene extends Phaser.Scene {
       const spawn = overworldSpawn(node);
       this.localX = spawn.x;
       this.localY = spawn.y;
-      this.meSprite?.setPosition(this.localX, this.localY);
+      this.poseSelf();
     }
     this.apply(this.board);
     this.emitPresence(true);

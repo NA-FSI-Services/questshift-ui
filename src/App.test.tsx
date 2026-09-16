@@ -53,7 +53,15 @@ const campaign: Campaign = {
       mapY: 220,
       puzzle_type: "linux",
       narrative: "A shell golem blocks the gate.",
-      clues: [{ id: "shell-log", label: "plaque", text: "/var/log/quest.log", x: 280, y: 220 }],
+      clues: [
+        {
+          id: "shell-log",
+          label: "plaque",
+          text: "/var/log/quest.log",
+          x: 280,
+          y: 220,
+        },
+      ],
     },
   ],
 };
@@ -115,7 +123,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Join" }));
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
     expect(getSession).toHaveBeenCalledWith("THORN-GOLEM");
-    expect(addPartyMember).toHaveBeenCalledWith("s1", { name: "Briar", seatId: "guardian" });
+    expect(addPartyMember).toHaveBeenCalledWith("s1", {
+      name: "Briar",
+      seatId: "guardian",
+    });
     expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
   });
 
@@ -140,7 +151,9 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
     expect(
-      await screen.findByRole("status", { name: "YAML fallback — Game Master unreachable" }),
+      await screen.findByRole("status", {
+        name: "YAML fallback — Game Master unreachable",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -163,7 +176,9 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
     await screen.findByText(/inventory: rune-thorn/);
-    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "grep rune" } });
+    fireEvent.change(screen.getByLabelText("Command"), {
+      target: { value: "grep rune" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "send" }));
     await waitFor(() =>
       expect(submitCommand).toHaveBeenCalledWith("s1", "grep rune", "guardian", "Ada"),
@@ -190,7 +205,9 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
     await screen.findByText(/inventory: rune-thorn/);
-    fireEvent.change(screen.getByLabelText("Command"), { target: { value: "cat" } });
+    fireEvent.change(screen.getByLabelText("Command"), {
+      target: { value: "cat" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "send" }));
     await waitFor(() =>
       expect(emit).toHaveBeenCalledWith(
@@ -211,7 +228,11 @@ describe("App", () => {
     const realCreate = document.createElement.bind(document);
     const spy = vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "a") {
-        return { click, href: "", download: "" } as unknown as HTMLAnchorElement;
+        return {
+          click,
+          href: "",
+          download: "",
+        } as unknown as HTMLAnchorElement;
       }
       return realCreate(tag);
     });
@@ -227,7 +248,9 @@ describe("App", () => {
     render(<App />);
     await screen.findByText("The Cluster That Forgot Its Name");
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(["id: s1\n"], "run.yaml", { type: "application/yaml" });
+    const file = new File(["id: s1\n"], "run.yaml", {
+      type: "application/yaml",
+    });
     fireEvent.change(input, { target: { files: [file] } });
     await waitFor(() => expect(importSession).toHaveBeenCalled());
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
@@ -242,7 +265,9 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "Automancer" }));
     await waitFor(() => expect(screen.getByLabelText("Alias")).toHaveValue("Linus"));
-    fireEvent.change(screen.getByLabelText("Alias"), { target: { value: "Forge" } });
+    fireEvent.change(screen.getByLabelText("Alias"), {
+      target: { value: "Forge" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
     expect(startSession).toHaveBeenCalledWith([{ name: "Forge", seatId: "automancer" }]);
@@ -257,5 +282,42 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
     fireEvent.click(await screen.findByRole("button", { name: "Copy code" }));
     expect(writeText).toHaveBeenCalledWith("thorn-golem");
+  });
+
+  it("shows who is inside a named room on the roster and board", async () => {
+    startSession.mockResolvedValue({
+      ...session,
+      partyMembers: [
+        {
+          name: "Ada",
+          seatId: "guardian",
+          mapX: 120,
+          mapY: 276,
+          viewedRoomId: "",
+        },
+        {
+          name: "Linus",
+          seatId: "automancer",
+          mapX: 450,
+          mapY: 360,
+          viewedRoomId: "room-01-broken-shell",
+        },
+      ],
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText(/Linus · Automancer · in The Broken Shell/)).toBeInTheDocument();
+    expect(emit).toHaveBeenCalledWith(
+      "board",
+      expect.objectContaining({
+        members: expect.arrayContaining([
+          expect.objectContaining({
+            name: "Linus",
+            viewedRoomId: "room-01-broken-shell",
+          }),
+        ]),
+      }),
+    );
   });
 });

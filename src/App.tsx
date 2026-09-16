@@ -58,9 +58,11 @@ export default function App() {
   const [alias, setAlias] = useState(() => suggestAlias("guardian", []));
   const [aliasTouched, setAliasTouched] = useState(false);
   const [takenAliases, setTakenAliases] = useState<string[]>([]);
-  const [pose, setPose] = useState<{ mapX: number; mapY: number; viewedRoomId: string } | null>(
-    null,
-  );
+  const [pose, setPose] = useState<{
+    mapX: number;
+    mapY: number;
+    viewedRoomId: string;
+  } | null>(null);
   const sessionRef = useRef<GameSession | null>(null);
   const meRef = useRef<PartyMember | null>(null);
 
@@ -446,11 +448,14 @@ export default function App() {
           <ul className="seats">
             {(session?.partyMembers?.length ? session.partyMembers : []).map((member) => {
               const seat = campaign?.seats.find((item) => item.id === member.seatId);
+              const inside = (member.viewedRoomId ?? "").trim();
+              const room = campaign?.rooms.find((item) => item.id === inside);
               return (
                 <li key={`${member.seatId}-${member.name}`}>
                   <i style={{ background: seat?.color ?? "#7f9a86" }} />
                   {member.name}
                   {seat ? ` · ${seat.title}` : ""}
+                  {room ? ` · in ${room.title}` : ""}
                 </li>
               );
             })}
