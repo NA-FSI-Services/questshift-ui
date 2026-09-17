@@ -5,6 +5,7 @@ import {
   INTERIOR_GOLEM,
   clueDialogBounds,
   clueDialogVisible,
+  floorChests,
   foundCluesFor,
   golemBlocksExit,
 } from "./clueDialog";
@@ -19,6 +20,18 @@ describe("private chest dialogs and the shell golem", () => {
     expect(foundCluesFor(members, "Ada")).toEqual(["shell-tree"]);
     expect(foundCluesFor(members, "linus")).toEqual(["shell-log"]);
     expect(foundCluesFor(members, "Moss")).toEqual([]);
+  });
+
+  it("keeps every room chest on the floor after pickup", () => {
+    const clues = [
+      { id: "shell-tree", roomId: "room-01-broken-shell" },
+      { id: "shell-log", roomId: "room-01-broken-shell" },
+      { id: "bind-hosts", roomId: "room-02-playbook-of-binding" },
+    ];
+    expect(floorChests(clues, "room-01-broken-shell").map((clue) => clue.id)).toEqual([
+      "shell-tree",
+      "shell-log",
+    ]);
   });
 
   it("blocks the Broken Shell door until that room is solved", () => {

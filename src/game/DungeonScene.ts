@@ -12,6 +12,7 @@ import {
 import {
   clueDialogBounds,
   clueDialogVisible,
+  floorChests,
   golemBlocksExit,
   INTERIOR_GOLEM,
   type ClueDialogCopy,
@@ -421,13 +422,11 @@ export class DungeonScene extends Phaser.Scene {
     if (golemBlocksExit(this.localViewed, state.completed)) {
       this.interior.push(this.place("golem", INTERIOR_GOLEM.x, INTERIOR_GOLEM.y).setDepth(5));
     }
-    state.clues
-      .filter((clue) => clue.roomId === this.localViewed && !state.foundClues.includes(clue.id))
-      .forEach((clue) => {
-        const chest = this.hotspot("clue", clue.x, clue.y).setDepth(4);
-        chest.on("pointerdown", () => this.pickClue(clue.id));
-        this.interior.push(chest);
-      });
+    floorChests(state.clues, this.localViewed).forEach((clue) => {
+      const chest = this.hotspot("clue", clue.x, clue.y).setDepth(4);
+      chest.on("pointerdown", () => this.pickClue(clue.id));
+      this.interior.push(chest);
+    });
     this.drawClueDialog();
   }
 
@@ -437,8 +436,11 @@ export class DungeonScene extends Phaser.Scene {
         this.leaveRoom();
         return;
       }
-      const roomClues = this.board.clues.filter((clue) => clue.roomId === this.localViewed);
-      const clue = clueInReach(this.localX, this.localY, roomClues, this.board.foundClues);
+      const clue = clueInReach(
+        this.localX,
+        this.localY,
+        floorChests(this.board.clues, this.localViewed),
+      );
       if (clue) {
         this.pickClue(clue.id);
       }
@@ -473,16 +475,19 @@ export class DungeonScene extends Phaser.Scene {
 
   private pickClue(clueId: string) {
     const clue = this.board.clues.find((item) => item.id === clueId);
-    if (!this.localViewed || !clue || this.board.foundClues.includes(clueId)) {
+    if (!this.localViewed || !clue) {
       return;
     }
     this.openClue = { id: clue.id, label: clue.label, text: clue.text };
-    this.board = {
-      ...this.board,
-      foundClues: [...this.board.foundClues, clueId],
-    };
+    const firstOpen = !this.board.foundClues.includes(clueId);
+    if (firstOpen) {
+      this.board = {
+        ...this.board,
+        foundClues: [...this.board.foundClues, clueId],
+      };
+    }
     this.drawInterior(this.board);
-    this.emitPresence(true, clueId);
+    this.emitPresence(true, firstOpen ? clueId : undefined);
   }
 
   private closeClueDialog() {

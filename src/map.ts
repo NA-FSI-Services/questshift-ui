@@ -58,15 +58,8 @@ export function nearestUnlockedRoom(
   );
 }
 
-export function clueInReach(
-  x: number,
-  y: number,
-  clues: MapClue[],
-  found: string[],
-): MapClue | undefined {
-  return clues.find(
-    (clue) => !found.includes(clue.id) && Math.hypot(clue.x - x, clue.y - y) <= CLUE_RADIUS,
-  );
+export function clueInReach(x: number, y: number, clues: MapClue[]): MapClue | undefined {
+  return clues.find((clue) => Math.hypot(clue.x - x, clue.y - y) <= CLUE_RADIUS);
 }
 
 export function atInteriorDoor(x: number, y: number): boolean {

@@ -38,13 +38,14 @@ describe("walkable map contract", () => {
     expect(nearestUnlockedRoom(280, 140, nodes, "room-01-broken-shell", {})).toBeUndefined();
   });
 
-  it("picks an unfound clue in reach", () => {
+  it("picks a clue in reach even after it was opened", () => {
     const clues = [
       { id: "shell-log", x: 280, y: 220 },
       { id: "shell-tree", x: 520, y: 200 },
     ];
-    expect(clueInReach(280, 220, clues, [])?.id).toBe("shell-log");
-    expect(clueInReach(280, 220, clues, ["shell-log"])).toBeUndefined();
+    expect(clueInReach(280, 220, clues)?.id).toBe("shell-log");
+    expect(clueInReach(520, 200, clues)?.id).toBe("shell-tree");
+    expect(clueInReach(10, 10, clues)).toBeUndefined();
   });
 
   it("detects the interior door and keeps a spawn inside the canvas", () => {

@@ -27,6 +27,10 @@ export function foundCluesFor(members: PartyClueHolder[], meName: string): strin
   return mine?.foundClues ?? [];
 }
 
+export function floorChests<T extends { roomId: string }>(clues: T[], roomId: string): T[] {
+  return clues.filter((clue) => clue.roomId === roomId);
+}
+
 export function golemBlocksExit(roomId: string, completed: Record<string, boolean>): boolean {
   return roomId === GOLEM_ROOM_ID && !completed[roomId];
 }
