@@ -118,6 +118,8 @@ describe("App", () => {
     expect(startSession).toHaveBeenCalledWith([{ name: "Ada", seatId: "guardian" }]);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
+    expect(screen.getByText("Party thorn-golem")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "start 60-minute run" })).not.toBeInTheDocument();
   });
 
   it("joins an existing party by share code", async () => {

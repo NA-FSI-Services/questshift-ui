@@ -475,121 +475,154 @@ export default function App() {
     (session?.foundClues ?? []).includes(clue.id),
   );
 
+  const partyPicker = (
+    <div className="party-picker">
+      <fieldset className="seat-picker">
+        <legend>Character</legend>
+        {(campaign?.seats ?? []).map((seat) => (
+          <button
+            key={seat.id}
+            type="button"
+            className={seatId === seat.id ? "seat-pick selected" : "seat-pick"}
+            aria-pressed={seatId === seat.id}
+            disabled={busy}
+            onClick={() => setSeatId(seat.id)}
+          >
+            {seat.title}
+          </button>
+        ))}
+      </fieldset>
+      <label>
+        Alias
+        <input
+          value={alias}
+          onChange={(event) => {
+            setAliasTouched(true);
+            setAlias(event.target.value);
+          }}
+          autoComplete="off"
+          disabled={busy}
+        />
+      </label>
+    </div>
+  );
+
+  const joinForm = (
+    <form className="join-form" onSubmit={(event) => void join(event)}>
+      <label>
+        Join code
+        <input
+          value={joinDraft}
+          onChange={(event) => setJoinDraft(event.target.value)}
+          placeholder="thorn-golem"
+          autoComplete="off"
+          disabled={busy}
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={busy || !joinDraft.trim() || !alias.trim()}
+        aria-busy={pending === "join"}
+      >
+        {pending === "join" ? (
+          <>
+            <BusyMark />
+            joining…
+          </>
+        ) : session ? (
+          "Switch party"
+        ) : (
+          "Join"
+        )}
+      </button>
+    </form>
+  );
+
   return (
     <div className="shell">
       <header className="topbar">
         <h1>QuestShift</h1>
-        <p>{campaign?.metadata.title ?? "The Cluster That Forgot Its Name"}</p>
-        <div className="party-picker">
-          <fieldset className="seat-picker">
-            <legend>Character</legend>
-            {(campaign?.seats ?? []).map((seat) => (
-              <button
-                key={seat.id}
-                type="button"
-                className={seatId === seat.id ? "seat-pick selected" : "seat-pick"}
-                aria-pressed={seatId === seat.id}
-                disabled={busy}
-                onClick={() => setSeatId(seat.id)}
-              >
-                {seat.title}
-              </button>
-            ))}
-          </fieldset>
-          <label>
-            Alias
-            <input
-              value={alias}
-              onChange={(event) => {
-                setAliasTouched(true);
-                setAlias(event.target.value);
-              }}
-              autoComplete="off"
-              disabled={busy}
-            />
-          </label>
-        </div>
-        <form className="join-form" onSubmit={(event) => void join(event)}>
-          <label>
-            Join code
-            <input
-              value={joinDraft}
-              onChange={(event) => setJoinDraft(event.target.value)}
-              placeholder="thorn-golem"
-              autoComplete="off"
-              disabled={busy}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={busy || !joinDraft.trim() || !alias.trim()}
-            aria-busy={pending === "join"}
-          >
-            {pending === "join" ? (
-              <>
-                <BusyMark />
-                joining…
-              </>
-            ) : session ? (
-              "Switch party"
-            ) : (
-              "Join"
-            )}
-          </button>
-        </form>
-        {session?.joinCode ? (
-          <p className="party-code">
-            <span>party code {session.joinCode}</span>
-            <button type="button" onClick={copyJoinCode}>
-              Copy code
-            </button>
-          </p>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => void begin()}
-          disabled={busy || !alias.trim()}
-          aria-busy={pending === "start"}
-        >
-          {pending === "start" ? <BusyMark /> : null}
-          {startLabel}
-        </button>
+        <p className="campaign-title">
+          {campaign?.metadata.title ?? "The Cluster That Forgot Its Name"}
+        </p>
         {session ? (
-          <button
-            type="button"
-            onClick={() => void abandon()}
-            disabled={busy}
-            aria-busy={pending === "leave"}
-          >
-            {pending === "leave" ? <BusyMark /> : null}
-            Abandon party
-          </button>
-        ) : null}
-        {session?.joinCode ? (
-          <details className="danger-zone">
-            <summary>Delete party</summary>
-            <p>This ends the hour for everyone on {session.joinCode}.</p>
-            <label>
-              Type {session.joinCode} to confirm
-              <input
-                value={deleteDraft}
-                onChange={(event) => setDeleteDraft(event.target.value)}
-                autoComplete="off"
-                disabled={busy}
-              />
-            </label>
+          <details className="party-menu">
+            <summary>Party {session.joinCode ?? ""}</summary>
+            <div className="party-menu-body">
+              {partyPicker}
+              {joinForm}
+              {session.joinCode ? (
+                <p className="party-code">
+                  <span>party code {session.joinCode}</span>
+                  <button type="button" onClick={copyJoinCode}>
+                    Copy code
+                  </button>
+                </p>
+              ) : null}
+              <div className="party-menu-actions">
+                <button
+                  type="button"
+                  onClick={() => void begin()}
+                  disabled={busy || !alias.trim()}
+                  aria-busy={pending === "start"}
+                >
+                  {pending === "start" ? <BusyMark /> : null}
+                  {startLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void abandon()}
+                  disabled={busy}
+                  aria-busy={pending === "leave"}
+                >
+                  {pending === "leave" ? <BusyMark /> : null}
+                  Abandon party
+                </button>
+              </div>
+              {session.joinCode ? (
+                <details className="danger-zone">
+                  <summary>Delete party</summary>
+                  <p>This ends the hour for everyone on {session.joinCode}.</p>
+                  <label>
+                    Type {session.joinCode} to confirm
+                    <input
+                      value={deleteDraft}
+                      onChange={(event) => setDeleteDraft(event.target.value)}
+                      autoComplete="off"
+                      disabled={busy}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={
+                      busy || deleteDraft.trim().toLowerCase() !== session.joinCode.toLowerCase()
+                    }
+                    aria-busy={pending === "delete"}
+                    onClick={() => void destroyParty()}
+                  >
+                    {pending === "delete" ? <BusyMark /> : null}
+                    Delete this party
+                  </button>
+                </details>
+              ) : null}
+            </div>
+          </details>
+        ) : (
+          <>
+            {partyPicker}
+            {joinForm}
             <button
               type="button"
-              className="danger"
-              disabled={busy || deleteDraft.trim().toLowerCase() !== session.joinCode.toLowerCase()}
-              aria-busy={pending === "delete"}
-              onClick={() => void destroyParty()}
+              onClick={() => void begin()}
+              disabled={busy || !alias.trim()}
+              aria-busy={pending === "start"}
             >
-              {pending === "delete" ? <BusyMark /> : null}
-              Delete this party
+              {pending === "start" ? <BusyMark /> : null}
+              {startLabel}
             </button>
-          </details>
-        ) : null}
+          </>
+        )}
         {waitMessage ? (
           <p className="busy-status" role="status">
             <BusyMark />
