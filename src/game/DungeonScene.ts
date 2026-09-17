@@ -1,8 +1,11 @@
 import Phaser from "phaser";
 import {
   atInteriorDoor,
+  challengeDoorLocked,
   clueInReach,
+  INTERIOR_CHALLENGE_DOOR,
   INTERIOR_DOOR,
+  INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
   nearestUnlockedRoom,
   overworldSpawn,
@@ -13,8 +16,9 @@ import {
   clueDialogBounds,
   clueDialogVisible,
   floorChests,
-  golemBlocksExit,
-  INTERIOR_GOLEM,
+  ROOM_TITLE,
+  ROOM_TITLE_STYLE,
+  roomTitleWell,
   type ClueDialogCopy,
 } from "../clueDialog";
 import {
@@ -22,6 +26,7 @@ import {
   CANVAS_WIDTH,
   frameFor,
   gemKeyFor,
+  guardianSpriteKey,
   LOOT_ORDER,
   lootSpriteKey,
   roomSpriteKey,
@@ -54,6 +59,7 @@ export type DungeonNode = {
   x: number;
   y: number;
   kind: string;
+  guardianSprite?: string;
 };
 
 export type PresencePayload = {
@@ -440,21 +446,25 @@ export class DungeonScene extends Phaser.Scene {
       return;
     }
     const node = this.nodes.find((item) => item.id === this.localViewed);
+    const title = this.add
+      .text(CANVAS_WIDTH / 2, ROOM_TITLE.y, node?.title ?? this.localViewed, ROOM_TITLE_STYLE)
+      .setOrigin(0.5, 0);
+    const well = roomTitleWell(title.width, title.height);
+    const plate = this.add.graphics().setDepth(7);
+    plate.fillStyle(ROOM_TITLE.fill, ROOM_TITLE.fillAlpha);
+    plate.fillRoundedRect(well.x, well.y, well.width, well.height, ROOM_TITLE.radius);
+    this.interior.push(plate, title.setDepth(8));
+    const lobby = this.hotspot("door", INTERIOR_DOOR.x, INTERIOR_DOOR.y).setDepth(4);
+    lobby.on("pointerdown", () => this.leaveRoom());
+    this.interior.push(lobby);
+    const locked = challengeDoorLocked(this.localViewed, state.completed);
+    const challengeKey = locked ? "door_locked" : "door";
     this.interior.push(
-      this.add
-        .text(CANVAS_WIDTH / 2, 28, node?.title ?? this.localViewed, {
-          fontFamily: "IBM Plex Mono",
-          fontSize: "16px",
-          color: "#e0b25a",
-        })
-        .setOrigin(0.5, 0)
-        .setDepth(8),
+      this.place(challengeKey, INTERIOR_CHALLENGE_DOOR.x, INTERIOR_CHALLENGE_DOOR.y).setDepth(4),
     );
-    const door = this.hotspot("door", INTERIOR_DOOR.x, INTERIOR_DOOR.y).setDepth(4);
-    door.on("pointerdown", () => this.leaveRoom());
-    this.interior.push(door);
-    if (golemBlocksExit(this.localViewed, state.completed)) {
-      this.interior.push(this.place("golem", INTERIOR_GOLEM.x, INTERIOR_GOLEM.y).setDepth(5));
+    if (locked) {
+      const sprite = guardianSpriteKey(this.localViewed, node?.guardianSprite);
+      this.interior.push(this.place(sprite, INTERIOR_GUARDIAN.x, INTERIOR_GUARDIAN.y).setDepth(5));
     }
     floorChests(state.clues, this.localViewed).forEach((clue) => {
       const chest = this.hotspot("clue", clue.x, clue.y).setDepth(4);

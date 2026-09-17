@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   CLUE_DIALOG,
-  GOLEM_ROOM_ID,
-  INTERIOR_GOLEM,
   clueDialogBounds,
   clueDialogVisible,
   floorChests,
   foundCluesFor,
-  golemBlocksExit,
+  ROOM_TITLE,
+  roomTitleWell,
 } from "./clueDialog";
-import { INTERIOR_DOOR } from "./map";
 
-describe("private chest dialogs and the shell golem", () => {
+describe("private chest dialogs", () => {
   it("reads found clues only from the local alias", () => {
     const members = [
       { name: "Ada", foundClues: ["shell-tree"] },
@@ -34,14 +32,6 @@ describe("private chest dialogs and the shell golem", () => {
     ]);
   });
 
-  it("blocks the Broken Shell door until that room is solved", () => {
-    expect(golemBlocksExit(GOLEM_ROOM_ID, {})).toBe(true);
-    expect(golemBlocksExit(GOLEM_ROOM_ID, { "room-01-broken-shell": true })).toBe(false);
-    expect(golemBlocksExit("room-02-playbook-of-binding", {})).toBe(false);
-    expect(INTERIOR_GOLEM.x).toBe(INTERIOR_DOOR.x);
-    expect(INTERIOR_GOLEM.y).toBeLessThan(INTERIOR_DOOR.y);
-  });
-
   it("places a readable dialog well on the canvas", () => {
     const box = clueDialogBounds();
     expect(box.width).toBe(CLUE_DIALOG.width);
@@ -51,5 +41,16 @@ describe("private chest dialogs and the shell golem", () => {
       true,
     );
     expect(clueDialogVisible(null)).toBe(false);
+  });
+
+  it("puts a dark well behind the interior room name", () => {
+    const well = roomTitleWell(220, 18);
+    expect(well.y).toBe(ROOM_TITLE.y - ROOM_TITLE.padY);
+    expect(well.width).toBe(220 + ROOM_TITLE.padX * 2);
+    expect(well.height).toBe(18 + ROOM_TITLE.padY * 2);
+    expect(well.x).toBeGreaterThan(0);
+    expect(well.x + well.width).toBeLessThanOrEqual(900);
+    expect(well.y + well.height).toBeLessThan(70);
+    expect(ROOM_TITLE.fill).toBe(0x070a09);
   });
 });

@@ -8,6 +8,10 @@ export const CLUE_RADIUS = 40;
 
 export const INTERIOR_DOOR = { x: 450, y: 470 };
 
+export const INTERIOR_CHALLENGE_DOOR = { x: 450, y: 70 };
+
+export const INTERIOR_GUARDIAN = { x: 450, y: 118 };
+
 export const INTERIOR_SPAWN = { x: 450, y: 360 };
 
 export const SPAWN_SOUTH = 56;
@@ -64,4 +68,12 @@ export function clueInReach(x: number, y: number, clues: MapClue[]): MapClue | u
 
 export function atInteriorDoor(x: number, y: number): boolean {
   return Math.hypot(INTERIOR_DOOR.x - x, INTERIOR_DOOR.y - y) <= ENTER_RADIUS;
+}
+
+export function atInteriorChallengeDoor(x: number, y: number): boolean {
+  return Math.hypot(INTERIOR_CHALLENGE_DOOR.x - x, INTERIOR_CHALLENGE_DOOR.y - y) <= ENTER_RADIUS;
+}
+
+export function challengeDoorLocked(roomId: string, completed: Record<string, boolean>): boolean {
+  return Boolean(roomId) && !completed[roomId];
 }

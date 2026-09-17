@@ -90,6 +90,7 @@ export default function App() {
         x: room.mapX,
         y: room.mapY,
         kind: room.puzzle_type,
+        guardianSprite: room.guardian?.sprite,
       })),
     [campaign],
   );

@@ -49,7 +49,12 @@ export const SPRITE_FRAMES = {
   loot_iron: 116,
   clue: 89,
   door: 52,
-  golem: 97,
+  door_locked: 6,
+  guardian_shell: 97,
+  guardian_playbook: 98,
+  guardian_pod: 100,
+  guardian_servlet: 108,
+  guardian_throne: 121,
 } as const;
 
 export type SpriteKey = keyof typeof SPRITE_FRAMES;
@@ -78,12 +83,27 @@ export const LOOT_SPRITE_KEYS: Record<string, SpriteKey> = {
 
 export const LOOT_ORDER = ["rune-thorn", "rune-ash", "rune-oak", "rune-iron"] as const;
 
+export const GUARDIAN_SPRITE_KEYS: Record<string, SpriteKey> = {
+  "room-01-broken-shell": "guardian_shell",
+  "room-02-playbook-of-binding": "guardian_playbook",
+  "room-03-pod-that-would-not-wake": "guardian_pod",
+  "room-04-cursed-servlet": "guardian_servlet",
+  "room-05-operators-throne": "guardian_throne",
+};
+
 export function frameFor(key: SpriteKey): number {
   return SPRITE_FRAMES[key];
 }
 
 export function roomSpriteKey(roomId: string): SpriteKey {
   return ROOM_SPRITE_KEYS[roomId] ?? "floor";
+}
+
+export function guardianSpriteKey(roomId: string, authored?: string): SpriteKey {
+  if (authored && authored in SPRITE_FRAMES) {
+    return authored as SpriteKey;
+  }
+  return GUARDIAN_SPRITE_KEYS[roomId] ?? "guardian_shell";
 }
 
 export function seatSpriteKey(seatId: string): SpriteKey | undefined {

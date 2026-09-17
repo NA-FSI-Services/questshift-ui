@@ -1,14 +1,25 @@
 import { namesMatch } from "./occupancy";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./sprites";
 
-export const GOLEM_ROOM_ID = "room-01-broken-shell";
-
-export const INTERIOR_GOLEM = { x: 450, y: 430 };
-
 export const CLUE_DIALOG = {
   width: 640,
   height: 340,
   padding: 20,
+};
+
+export const ROOM_TITLE = {
+  y: 28,
+  padX: 14,
+  padY: 6,
+  fill: 0x070a09,
+  fillAlpha: 0.94,
+  radius: 4,
+};
+
+export const ROOM_TITLE_STYLE = {
+  fontFamily: "IBM Plex Mono",
+  fontSize: "16px",
+  color: "#e0b25a",
 };
 
 export type PartyClueHolder = {
@@ -31,16 +42,26 @@ export function floorChests<T extends { roomId: string }>(clues: T[], roomId: st
   return clues.filter((clue) => clue.roomId === roomId);
 }
 
-export function golemBlocksExit(roomId: string, completed: Record<string, boolean>): boolean {
-  return roomId === GOLEM_ROOM_ID && !completed[roomId];
-}
-
 export function clueDialogBounds(): { x: number; y: number; width: number; height: number } {
   return {
     x: Math.round((CANVAS_WIDTH - CLUE_DIALOG.width) / 2),
     y: Math.round((CANVAS_HEIGHT - CLUE_DIALOG.height) / 2) - 16,
     width: CLUE_DIALOG.width,
     height: CLUE_DIALOG.height,
+  };
+}
+
+export function roomTitleWell(
+  textWidth: number,
+  textHeight: number,
+): { x: number; y: number; width: number; height: number } {
+  const width = Math.ceil(textWidth) + ROOM_TITLE.padX * 2;
+  const height = Math.ceil(textHeight) + ROOM_TITLE.padY * 2;
+  return {
+    x: Math.round((CANVAS_WIDTH - width) / 2),
+    y: ROOM_TITLE.y - ROOM_TITLE.padY,
+    width,
+    height,
   };
 }
 

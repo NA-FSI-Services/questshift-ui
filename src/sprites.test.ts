@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   gemKeyFor,
   frameFor,
+  guardianSpriteKey,
+  GUARDIAN_SPRITE_KEYS,
   lootSpriteKey,
   LOOT_ORDER,
   LOOT_SPRITE_KEYS,
@@ -41,7 +43,12 @@ const UX_FRAMES: Record<string, number> = {
   loot_iron: 116,
   clue: 89,
   door: 52,
-  golem: 97,
+  door_locked: 6,
+  guardian_shell: 97,
+  guardian_playbook: 98,
+  guardian_pod: 100,
+  guardian_servlet: 108,
+  guardian_throne: 121,
 };
 
 describe("Kenney sprite keys", () => {
@@ -74,6 +81,17 @@ describe("Kenney sprite keys", () => {
     expect(SEAT_SPRITE_KEYS.guardian).toBe("seat_guardian");
     expect(seatSpriteKey("automancer")).toBe("seat_automancer");
     expect(seatSpriteKey("missing")).toBeUndefined();
+  });
+
+  it("maps each challenge room to a distinct Kenney guardian", () => {
+    expect(GUARDIAN_SPRITE_KEYS["room-01-broken-shell"]).toBe("guardian_shell");
+    expect(guardianSpriteKey("room-02-playbook-of-binding")).toBe("guardian_playbook");
+    expect(guardianSpriteKey("room-03-pod-that-would-not-wake")).toBe("guardian_pod");
+    expect(guardianSpriteKey("room-04-cursed-servlet")).toBe("guardian_servlet");
+    expect(guardianSpriteKey("room-05-operators-throne")).toBe("guardian_throne");
+    expect(guardianSpriteKey("room-01-broken-shell", "guardian_pod")).toBe("guardian_pod");
+    expect(guardianSpriteKey("unknown-room")).toBe("guardian_shell");
+    expect(new Set(Object.values(GUARDIAN_SPRITE_KEYS)).size).toBe(5);
   });
 
   it("maps inventory runes to loot keys and ignores trophy ids", () => {

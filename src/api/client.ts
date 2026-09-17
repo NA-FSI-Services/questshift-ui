@@ -60,6 +60,7 @@ export type CampaignRoom = {
   narrative?: string;
   prompt?: string;
   clues?: CampaignClue[];
+  guardian?: { id: string; title: string; sprite: string };
 };
 
 export type Campaign = {

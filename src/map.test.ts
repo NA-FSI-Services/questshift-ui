@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  atInteriorChallengeDoor,
   atInteriorDoor,
+  challengeDoorLocked,
   clampPosition,
   clueInReach,
+  INTERIOR_CHALLENGE_DOOR,
   INTERIOR_DOOR,
+  INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
   nearestUnlockedRoom,
   overworldSpawn,
@@ -48,9 +52,16 @@ describe("walkable map contract", () => {
     expect(clueInReach(10, 10, clues)).toBeUndefined();
   });
 
-  it("detects the interior door and keeps a spawn inside the canvas", () => {
+  it("detects the south lobby door and keeps a spawn inside the canvas", () => {
     expect(atInteriorDoor(INTERIOR_DOOR.x, INTERIOR_DOOR.y)).toBe(true);
     expect(atInteriorDoor(INTERIOR_SPAWN.x, INTERIOR_SPAWN.y)).toBe(false);
+    expect(atInteriorChallengeDoor(INTERIOR_CHALLENGE_DOOR.x, INTERIOR_CHALLENGE_DOOR.y)).toBe(
+      true,
+    );
+    expect(atInteriorChallengeDoor(INTERIOR_DOOR.x, INTERIOR_DOOR.y)).toBe(false);
+    expect(INTERIOR_GUARDIAN.x).toBe(INTERIOR_CHALLENGE_DOOR.x);
+    expect(INTERIOR_GUARDIAN.y).toBeGreaterThan(INTERIOR_CHALLENGE_DOOR.y);
+    expect(INTERIOR_GUARDIAN.y).toBeLessThan(INTERIOR_SPAWN.y);
     const stepped = stepToward(100, 100, STEP, 0);
     expect(stepped.x).toBeGreaterThan(100);
     expect(clampPosition(-40, 999).x).toBeGreaterThan(0);
@@ -59,5 +70,14 @@ describe("walkable map contract", () => {
       x: 120,
       y: 276,
     });
+  });
+
+  it("locks the north challenge door until that room is solved", () => {
+    expect(challengeDoorLocked("room-01-broken-shell", {})).toBe(true);
+    expect(challengeDoorLocked("room-02-playbook-of-binding", {})).toBe(true);
+    expect(challengeDoorLocked("room-01-broken-shell", { "room-01-broken-shell": true })).toBe(
+      false,
+    );
+    expect(challengeDoorLocked("", {})).toBe(false);
   });
 });
