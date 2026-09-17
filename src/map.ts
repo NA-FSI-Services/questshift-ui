@@ -77,3 +77,59 @@ export function atInteriorChallengeDoor(x: number, y: number): boolean {
 export function challengeDoorLocked(roomId: string, completed: Record<string, boolean>): boolean {
   return Boolean(roomId) && !completed[roomId];
 }
+
+export type PathCell = { col: number; row: number };
+
+export function tileCell(x: number, y: number): PathCell {
+  return {
+    col: Math.round(x / TILE_DISPLAY),
+    row: Math.round(y / TILE_DISPLAY),
+  };
+}
+
+function manhattanCells(from: PathCell, to: PathCell, verticalFirst: boolean): PathCell[] {
+  const cells: PathCell[] = [{ col: from.col, row: from.row }];
+  let col = from.col;
+  let row = from.row;
+  const walk = (horizontal: boolean) => {
+    const target = horizontal ? to.col : to.row;
+    let cursor = horizontal ? col : row;
+    const step = Math.sign(target - cursor);
+    while (cursor !== target) {
+      cursor += step;
+      if (horizontal) {
+        col = cursor;
+      } else {
+        row = cursor;
+      }
+      cells.push({ col, row });
+    }
+  };
+  if (verticalFirst) {
+    walk(false);
+    walk(true);
+  } else {
+    walk(true);
+    walk(false);
+  }
+  return cells;
+}
+
+/** Cosmetic overworld trail in campaign order. Does not gate walking or scoring. */
+export function lobbyPathCells(nodes: { x: number; y: number }[]): PathCell[] {
+  const seen = new Set<string>();
+  const cells: PathCell[] = [];
+  for (let index = 0; index < nodes.length - 1; index += 1) {
+    const from = tileCell(nodes[index].x, nodes[index].y);
+    const to = tileCell(nodes[index + 1].x, nodes[index + 1].y);
+    manhattanCells(from, to, index % 2 === 1).forEach((cell) => {
+      const key = `${cell.col},${cell.row}`;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      cells.push(cell);
+    });
+  }
+  return cells;
+}

@@ -7,7 +7,7 @@ alwaysApply: false
 # Phaser / React
 
 - Dual panel: `DungeonScene` (pixel art) + `TerminalPanel` (IBM Plex Mono). Do not merge them.
-- Sprite sheet `/assets/kenney/tiny-dungeon/tilemap_packed.png`: 16×16, 12 columns, spacing 0. Use UX.md keys (`seat_guardian`, `room_01_broken_shell`, `gem_complete`, …). `pixelArt: true`.
+- Sprite sheet `/assets/kenney/tiny-dungeon/tilemap_packed.png`: 16×16, 12 columns, spacing 0. Use UX.md keys (`seat_guardian`, `door`, `path_rocks`, `gem_complete`, …). `pixelArt: true`.
 - Map SFX `/assets/kenney/sfx/`: named keys in UX.md (`sfx_door_open`, `sfx_room_enter`, `sfx_quest_complete`, `sfx_chest_open`). No TTS.
 - REST lives in `src/api/client.ts`. Match engine camelCase session fields. Proxy `/api` and `/ws` only. Session restore uses `POST /api/sessions/import`. Leave/delete use `DELETE /api/sessions/{id}/party` and `DELETE /api/sessions/{id}`.
 - Quality: Prettier + ESLint + Vitest coverage (`npm run verify`). Phaser canvas (`src/game`) is excluded from coverage.

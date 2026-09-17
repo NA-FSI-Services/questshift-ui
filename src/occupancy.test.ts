@@ -141,7 +141,7 @@ describe("occupantsByRoom", () => {
       "Forge",
       "Glyph",
     ]);
-    expect(occupancySlot(120, 220, 0, 4)).toEqual({ x: 100, y: 162 });
+    expect(occupancySlot(120, 220, 0, 4)).toEqual({ x: 100, y: 132 });
     expect(occupancySlot(120, 220, 3, 4).y).toBeLessThan(occupancySlot(120, 220, 0, 4).y);
   });
 });

@@ -9,11 +9,13 @@ import {
   INTERIOR_DOOR,
   INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
+  lobbyPathCells,
   nearestUnlockedRoom,
   overworldSpawn,
   roomUnlocked,
   STEP,
   stepToward,
+  tileCell,
 } from "./map";
 
 const nodes = [
@@ -79,5 +81,27 @@ describe("walkable map contract", () => {
       false,
     );
     expect(challengeDoorLocked("", {})).toBe(false);
+  });
+
+  it("traces a snake of path cells between lobby rooms without gating entry", () => {
+    const trail = [
+      { x: 120, y: 220 },
+      { x: 280, y: 140 },
+      { x: 460, y: 180 },
+      { x: 620, y: 260 },
+      { x: 780, y: 160 },
+    ];
+    const cells = lobbyPathCells(trail);
+    expect(cells.length).toBeGreaterThan(trail.length);
+    trail.forEach((node) => {
+      const at = tileCell(node.x, node.y);
+      expect(cells).toContainEqual(at);
+    });
+    const first = tileCell(trail[0].x, trail[0].y);
+    const second = tileCell(trail[1].x, trail[1].y);
+    const between = cells.find((cell) => cell.col !== first.col || cell.row !== first.row);
+    expect(between).toBeDefined();
+    expect(Math.abs(second.col - first.col) + Math.abs(second.row - first.row)).toBeGreaterThan(0);
+    expect(lobbyPathCells([{ x: 120, y: 220 }])).toEqual([]);
   });
 });

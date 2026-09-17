@@ -7,6 +7,7 @@ import {
   INTERIOR_DOOR,
   INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
+  lobbyPathCells,
   nearestUnlockedRoom,
   overworldSpawn,
   roomUnlocked,
@@ -27,9 +28,10 @@ import {
   frameFor,
   gemKeyFor,
   guardianSpriteKey,
+  lobbyDoorKey,
   LOOT_ORDER,
   lootSpriteKey,
-  roomSpriteKey,
+  pathSpriteKey,
   seatSpriteKey,
   SPRITE_SCALE,
   SPRITESHEET_LOAD,
@@ -106,6 +108,7 @@ export class DungeonScene extends Phaser.Scene {
   private nodes: DungeonNode[] = [];
   private rooms = new Map<string, Phaser.GameObjects.Image>();
   private gems = new Map<string, Phaser.GameObjects.Image>();
+  private pathTiles: Phaser.GameObjects.Image[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
   private party: Phaser.GameObjects.GameObject[] = [];
   private loot: Phaser.GameObjects.Image[] = [];
@@ -158,11 +161,12 @@ export class DungeonScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#101714");
     this.drawTiles();
+    this.drawPath();
     this.nodes.forEach((node) => {
-      const room = this.hotspot(roomSpriteKey(node.id), node.x, node.y).setDepth(1);
+      const room = this.hotspot("lobby_gate", node.x, node.y).setDepth(2);
       room.on("pointerdown", () => this.tryEnter(node.id));
       this.rooms.set(node.id, room);
-      const gem = this.place("gem_locked", node.x + 28, node.y - 40).setDepth(2);
+      const gem = this.place("gem_locked", node.x + 36, node.y - 8).setDepth(3);
       this.gems.set(node.id, gem);
       this.labels.push(
         this.add
@@ -290,6 +294,15 @@ export class DungeonScene extends Phaser.Scene {
       room.setVisible(!interior);
       gem.setVisible(!interior);
       const current = Boolean(state.currentRoomId) && state.currentRoomId === node.id;
+      room.setFrame(
+        frameFor(
+          lobbyDoorKey({
+            roomId: node.id,
+            currentRoomId: state.currentRoomId,
+            completed: state.completed,
+          }),
+        ),
+      );
       gem.setFrame(
         frameFor(
           gemKeyFor({
@@ -312,6 +325,7 @@ export class DungeonScene extends Phaser.Scene {
         });
       }
     });
+    this.pathTiles.forEach((tile) => tile.setVisible(!interior));
     this.labels.forEach((label) => label.setVisible(!interior));
     const current = this.nodes.find((node) => node.id === state.currentRoomId);
     if (this.focus) {
@@ -673,6 +687,28 @@ export class DungeonScene extends Phaser.Scene {
           .setDepth(0);
       }
     }
+  }
+
+  private drawPath() {
+    const cols = Math.ceil(CANVAS_WIDTH / TILE_DISPLAY);
+    const rows = Math.ceil(CANVAS_HEIGHT / TILE_DISPLAY);
+    lobbyPathCells(this.nodes).forEach((cell, index) => {
+      if (cell.col <= 0 || cell.row <= 0 || cell.col >= cols - 1 || cell.row >= rows - 1) {
+        return;
+      }
+      this.pathTiles.push(
+        this.add
+          .image(
+            cell.col * TILE_DISPLAY,
+            cell.row * TILE_DISPLAY,
+            TINY_DUNGEON_SHEET,
+            frameFor(pathSpriteKey(index)),
+          )
+          .setOrigin(0)
+          .setScale(SPRITE_SCALE)
+          .setDepth(0.5),
+      );
+    });
   }
 
   private place(key: SpriteKey, x: number, y: number) {

@@ -4,11 +4,11 @@ import {
   frameFor,
   guardianSpriteKey,
   GUARDIAN_SPRITE_KEYS,
+  lobbyDoorKey,
   lootSpriteKey,
   LOOT_ORDER,
   LOOT_SPRITE_KEYS,
-  ROOM_SPRITE_KEYS,
-  roomSpriteKey,
+  pathSpriteKey,
   SEAT_SPRITE_KEYS,
   seatSpriteKey,
   SHEET_SPACING,
@@ -21,12 +21,9 @@ import {
 } from "./sprites";
 
 const UX_FRAMES: Record<string, number> = {
-  room_01_broken_shell: 29,
-  room_02_playbook: 56,
-  room_03_pod: 80,
-  room_04_servlet: 54,
-  room_05_throne: 72,
   floor: 48,
+  path: 24,
+  path_rocks: 12,
   wall: 28,
   focus: 60,
   seat_automancer: 84,
@@ -42,8 +39,10 @@ const UX_FRAMES: Record<string, number> = {
   loot_oak: 114,
   loot_iron: 116,
   clue: 89,
-  door: 52,
-  door_locked: 6,
+  door: 45,
+  door_locked: 21,
+  lobby_gate: 9,
+  lobby_gate_open: 10,
   guardian_shell: 97,
   guardian_playbook: 98,
   guardian_pod: 100,
@@ -71,16 +70,45 @@ describe("Kenney sprite keys", () => {
     }
   });
 
-  it("maps campaign room ids and seat ids to named keys", () => {
-    expect(ROOM_SPRITE_KEYS["room-01-broken-shell"]).toBe("room_01_broken_shell");
-    expect(ROOM_SPRITE_KEYS["room-02-playbook-of-binding"]).toBe("room_02_playbook");
-    expect(ROOM_SPRITE_KEYS["room-03-pod-that-would-not-wake"]).toBe("room_03_pod");
-    expect(ROOM_SPRITE_KEYS["room-04-cursed-servlet"]).toBe("room_04_servlet");
-    expect(ROOM_SPRITE_KEYS["room-05-operators-throne"]).toBe("room_05_throne");
-    expect(roomSpriteKey("unknown-room")).toBe("floor");
+  it("maps campaign seat ids to named keys", () => {
     expect(SEAT_SPRITE_KEYS.guardian).toBe("seat_guardian");
     expect(seatSpriteKey("automancer")).toBe("seat_automancer");
     expect(seatSpriteKey("missing")).toBeUndefined();
+  });
+
+  it("keeps resolved lobby gates closed on tile 9", () => {
+    expect(
+      lobbyDoorKey({
+        roomId: "room-01-broken-shell",
+        currentRoomId: "room-01-broken-shell",
+        completed: {},
+      }),
+    ).toBe("lobby_gate_open");
+    expect(
+      lobbyDoorKey({
+        roomId: "room-02-playbook-of-binding",
+        currentRoomId: "room-01-broken-shell",
+        completed: {},
+      }),
+    ).toBe("lobby_gate");
+    expect(
+      lobbyDoorKey({
+        roomId: "room-01-broken-shell",
+        currentRoomId: "room-02-playbook-of-binding",
+        completed: { "room-01-broken-shell": true },
+      }),
+    ).toBe("lobby_gate");
+    expect(frameFor("lobby_gate")).toBe(9);
+    expect(frameFor("lobby_gate_open")).toBe(10);
+    expect(frameFor("door_locked")).toBe(21);
+    expect(frameFor("door")).toBe(45);
+  });
+
+  it("alternates hard floor and rocky floor along the lobby snake", () => {
+    expect(pathSpriteKey(0)).toBe("path");
+    expect(pathSpriteKey(1)).toBe("path_rocks");
+    expect(frameFor("path")).toBe(24);
+    expect(frameFor("path_rocks")).toBe(12);
   });
 
   it("maps each challenge room to a distinct Kenney guardian", () => {

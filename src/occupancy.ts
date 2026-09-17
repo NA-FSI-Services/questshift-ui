@@ -6,7 +6,7 @@ export const OFFSET_STEP = 16;
 
 export const OFFSET_WRAP = 4;
 
-export const OCCUPANCY_NORTH = 58;
+export const OCCUPANCY_NORTH = 88;
 
 export const OCCUPANCY_COL = 20;
 

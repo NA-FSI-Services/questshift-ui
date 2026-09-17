@@ -27,12 +27,9 @@ export const SPRITESHEET_LOAD = {
 } as const;
 
 export const SPRITE_FRAMES = {
-  room_01_broken_shell: 29,
-  room_02_playbook: 56,
-  room_03_pod: 80,
-  room_04_servlet: 54,
-  room_05_throne: 72,
   floor: 48,
+  path: 24,
+  path_rocks: 12,
   wall: 28,
   focus: 60,
   seat_automancer: 84,
@@ -48,8 +45,10 @@ export const SPRITE_FRAMES = {
   loot_oak: 114,
   loot_iron: 116,
   clue: 89,
-  door: 52,
-  door_locked: 6,
+  door: 45,
+  door_locked: 21,
+  lobby_gate: 9,
+  lobby_gate_open: 10,
   guardian_shell: 97,
   guardian_playbook: 98,
   guardian_pod: 100,
@@ -58,14 +57,6 @@ export const SPRITE_FRAMES = {
 } as const;
 
 export type SpriteKey = keyof typeof SPRITE_FRAMES;
-
-export const ROOM_SPRITE_KEYS: Record<string, SpriteKey> = {
-  "room-01-broken-shell": "room_01_broken_shell",
-  "room-02-playbook-of-binding": "room_02_playbook",
-  "room-03-pod-that-would-not-wake": "room_03_pod",
-  "room-04-cursed-servlet": "room_04_servlet",
-  "room-05-operators-throne": "room_05_throne",
-};
 
 export const SEAT_SPRITE_KEYS: Record<string, SpriteKey> = {
   automancer: "seat_automancer",
@@ -95,8 +86,8 @@ export function frameFor(key: SpriteKey): number {
   return SPRITE_FRAMES[key];
 }
 
-export function roomSpriteKey(roomId: string): SpriteKey {
-  return ROOM_SPRITE_KEYS[roomId] ?? "floor";
+export function pathSpriteKey(index: number): SpriteKey {
+  return index % 2 === 0 ? "path" : "path_rocks";
 }
 
 export function guardianSpriteKey(roomId: string, authored?: string): SpriteKey {
@@ -112,6 +103,20 @@ export function seatSpriteKey(seatId: string): SpriteKey | undefined {
 
 export function lootSpriteKey(itemId: string): SpriteKey | undefined {
   return LOOT_SPRITE_KEYS[itemId];
+}
+
+export function lobbyDoorKey(opts: {
+  roomId: string;
+  currentRoomId: string;
+  completed: Record<string, boolean>;
+}): SpriteKey {
+  if (opts.completed[opts.roomId]) {
+    return "lobby_gate";
+  }
+  if (opts.roomId === opts.currentRoomId) {
+    return "lobby_gate_open";
+  }
+  return "lobby_gate";
 }
 
 export function gemKeyFor(opts: {
