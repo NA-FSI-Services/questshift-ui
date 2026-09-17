@@ -39,6 +39,13 @@ import {
   occupancySlot,
   placeWalkers,
 } from "../occupancy";
+import {
+  completionsToCue,
+  ROOM_ENTER_DELAY_MS,
+  SFX_EVENTS,
+  SFX_LOAD,
+  type SfxEvent,
+} from "../sounds";
 import { bindWalkKeys } from "../walkKeys";
 
 export type DungeonNode = {
@@ -74,6 +81,7 @@ export type BoardClue = {
 };
 
 export type BoardState = {
+  sessionId?: string;
   currentRoomId: string;
   completed: Record<string, boolean>;
   canvasEvent?: string;
@@ -124,6 +132,9 @@ export class DungeonScene extends Phaser.Scene {
   private keyEnter?: Phaser.Input.Keyboard.Key;
   private keyEsc?: Phaser.Input.Keyboard.Key;
   private openClue?: ClueDialogCopy;
+  private heardComplete = new Set<string>();
+  private completePrimed = false;
+  private enterCue?: Phaser.Time.TimerEvent;
 
   constructor() {
     super("dungeon");
@@ -135,6 +146,7 @@ export class DungeonScene extends Phaser.Scene {
 
   preload() {
     this.load.spritesheet(SPRITESHEET_LOAD.key, SPRITESHEET_LOAD.url, SPRITESHEET_LOAD.frameConfig);
+    SFX_LOAD.forEach((clip) => this.load.audio(clip.key, clip.urls));
   }
 
   create() {
@@ -173,6 +185,13 @@ export class DungeonScene extends Phaser.Scene {
       this.keyEnter = keys.Enter as Phaser.Input.Keyboard.Key;
       this.keyEsc = keys.Esc as Phaser.Input.Keyboard.Key;
     }
+    this.input.on("pointerdown", () => this.unlockAudio());
+    window.addEventListener("pointerdown", this.unlockAudio, { capture: true });
+    window.addEventListener("keydown", this.unlockAudio, { capture: true });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("pointerdown", this.unlockAudio, true);
+      window.removeEventListener("keydown", this.unlockAudio, true);
+    });
     this.events.on("board", (state: BoardState) => this.apply(state));
     this.apply({
       currentRoomId: "",
@@ -238,6 +257,21 @@ export class DungeonScene extends Phaser.Scene {
   apply(state: BoardState) {
     if (this.board.meName !== state.meName) {
       this.posed = false;
+    }
+    if (this.board.sessionId !== state.sessionId) {
+      this.heardComplete = new Set();
+      this.completePrimed = false;
+    }
+    const cue = completionsToCue({
+      heard: this.heardComplete,
+      completed: state.completed,
+      primed: this.completePrimed,
+      live: Boolean(state.sessionId || state.meName || state.currentRoomId),
+    });
+    this.heardComplete = cue.heard;
+    this.completePrimed = cue.primed;
+    if (cue.play) {
+      this.playSfx("quest_complete");
     }
     this.board = state;
     const interior = Boolean(this.localViewed);
@@ -469,6 +503,9 @@ export class DungeonScene extends Phaser.Scene {
     this.localX = INTERIOR_SPAWN.x;
     this.localY = INTERIOR_SPAWN.y;
     this.poseSelf();
+    this.playSfx("door_open");
+    this.enterCue?.remove(false);
+    this.enterCue = this.time.delayedCall(ROOM_ENTER_DELAY_MS, () => this.playSfx("room_enter"));
     this.apply(this.board);
     this.emitPresence(true);
   }
@@ -479,6 +516,7 @@ export class DungeonScene extends Phaser.Scene {
       return;
     }
     this.openClue = { id: clue.id, label: clue.label, text: clue.text };
+    this.playSfx("chest_open");
     const firstOpen = !this.board.foundClues.includes(clueId);
     if (firstOpen) {
       this.board = {
@@ -550,6 +588,8 @@ export class DungeonScene extends Phaser.Scene {
       return;
     }
     this.openClue = undefined;
+    this.enterCue?.remove(false);
+    this.playSfx("door_open");
     const node = this.nodes.find((item) => item.id === this.localViewed);
     this.localViewed = "";
     if (node) {
@@ -588,6 +628,21 @@ export class DungeonScene extends Phaser.Scene {
 
   private justDown(key?: Phaser.Input.Keyboard.Key): boolean {
     return Boolean(key && Phaser.Input.Keyboard.JustDown(key));
+  }
+
+  private unlockAudio = () => {
+    if (this.sound.locked) {
+      this.sound.unlock();
+    }
+  };
+
+  private playSfx(event: SfxEvent) {
+    this.unlockAudio();
+    const spec = SFX_EVENTS[event];
+    if (!this.cache.audio.exists(spec.key)) {
+      return;
+    }
+    this.sound.play(spec.key, { volume: spec.volume });
   }
 
   private drawTiles() {

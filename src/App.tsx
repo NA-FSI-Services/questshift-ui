@@ -167,6 +167,7 @@ export default function App() {
     }
     const scene = gameRef.current.scene.getScene("dungeon") as DungeonScene | null;
     scene?.events.emit("board", {
+      sessionId: session.id,
       currentRoomId: session.currentRoomId,
       completed: session.puzzleCompletion,
       canvasEvent: session.lastCanvasEvent,

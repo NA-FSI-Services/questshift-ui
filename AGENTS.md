@@ -17,7 +17,7 @@ Read essentials, then UX sprite keys:
 Phaser 3 + React + TypeScript. Vite proxies `/api` and `/ws` to `localhost:8080`.
 
 - Panel A: pixel dungeon (`src/game/DungeonScene.ts`). Panel B: IBM Plex Mono terminal (`src/terminal/TerminalPanel.tsx`).
-- Sprite sheet: `public/assets/kenney/tiny-dungeon/tilemap_packed.png` (Kenney CC0). Use named keys in UX.md. No AI-generated images.
+- Kenney Tiny Dungeon CC0 for sprites; Kenney RPG Audio + Music Jingles CC0 for map SFX (`public/assets/kenney/sfx/`). Named keys in UX.md. No AI images. No TTS.
 - Seats are cosmetic. Do not gate commands by seat.
 - No TTS, mic, or Web Speech.
 - Do not commit `.env` or API keys (already gitignored). v1 UI has no auth.

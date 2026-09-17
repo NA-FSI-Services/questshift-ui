@@ -1,5 +1,5 @@
-Third-party pixel art (CC0)
-===========================
+Third-party pixel art and SFX (CC0)
+===================================
 
 Kenney Tiny Dungeon 1.0
 Creator: Kenney (www.kenney.nl)
@@ -9,5 +9,24 @@ Source: https://kenney.nl/assets/tiny-dungeon
 Vendored file: kenney/tiny-dungeon/tilemap_packed.png
 Kenney license text: kenney/tiny-dungeon/LICENSE.txt
 
+Kenney RPG Audio 1.0
+Creator: Kenney (www.kenney.nl)
+License: Creative Commons Zero 1.0 Universal
+Source: https://kenney.nl/assets/rpg-audio
+Vendored as:
+  kenney/sfx/door_open.{ogg,wav}   ← doorOpen_1.ogg (opening doors)
+  kenney/sfx/room_enter.{ogg,wav}  ← footstep00.ogg (entering rooms)
+  kenney/sfx/chest_open.{ogg,wav}  ← metalLatch.ogg (opening chests)
+
+Kenney Music Jingles 1.0
+Creator: Kenney (www.kenney.nl)
+License: Creative Commons Zero 1.0 Universal
+Source: https://kenney.nl/assets/music-jingles
+Vendored as:
+  kenney/sfx/quest_complete.{ogg,wav} ← jingles_NES03.ogg (completing a room)
+
+Kenney license text for the four clips: kenney/sfx/LICENSE.txt
+
 Attribution is not required by CC0; QuestShift credits Kenney.nl anyway.
-Do not replace this sheet with AI-generated images.
+Do not replace this sheet or these clips with AI-generated assets.
+No TTS / Web Speech — these files are short map SFX only.

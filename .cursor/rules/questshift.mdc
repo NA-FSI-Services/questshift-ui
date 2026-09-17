@@ -16,4 +16,4 @@ Read this repo's `AGENTS.md`, then essentials and UX sprite keys.
 - UX: https://github.com/NA-FSI-Services/questshift/blob/main/docs/UX.md
   Local: `/Users/dtorresf/Documents/GitHub/na-fsi-services/questshift/questshift/docs/UX.md`
 
-Phaser 3 + React. Panel A uses Kenney Tiny Dungeon CC0 (`public/assets/kenney/tiny-dungeon/tilemap_packed.png`). Panel B is IBM Plex Mono. No AI sprites, no TTS, no cluster exec.
+Phaser 3 + React. Panel A uses Kenney Tiny Dungeon CC0 (`public/assets/kenney/tiny-dungeon/tilemap_packed.png`) and Kenney CC0 SFX (`public/assets/kenney/sfx/`). Panel B is IBM Plex Mono. No AI sprites, no TTS, no cluster exec.

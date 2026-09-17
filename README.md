@@ -2,9 +2,9 @@
 
 Phaser 3 + React dual-panel client for [QuestShift](https://github.com/NA-FSI-Services/questshift).
 
-- **Panel A:** 2D dungeon board (rooms, avatars, status)
+- **Panel A:** 2D dungeon board (rooms, avatars, status, Kenney CC0 SFX)
 - **Panel B:** retro terminal for Game Master text and command input
-- Voice / TTS is intentionally absent in v1
+- Voice / TTS is intentionally absent in v1; short map SFX are Kenney CC0, not speech
 
 ## Run locally
 

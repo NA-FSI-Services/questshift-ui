@@ -8,7 +8,7 @@ Read `AGENTS.md` first (this repo), then the docs-repo map.
 ## Hard rules (v1 freeze)
 
 - Phaser 3 + React + TypeScript. Dual panel: pixel canvas + IBM Plex Mono terminal.
-- Kenney Tiny Dungeon CC0 only for sprites (`public/assets/`). No AI images. No TTS.
+- Kenney Tiny Dungeon CC0 for sprites (`public/assets/kenney/tiny-dungeon/`). Kenney RPG Audio + Music Jingles CC0 for map SFX (`public/assets/kenney/sfx/`). No AI assets. No TTS.
 - Terminal is simulated. Never shell out `oc` / Ansible / Java from the browser.
 - Campaign YAML / engine evaluator decide wins. UI does not invent puzzle answers.
 - Cosmetic seats. Switch, abandon, and delete parties from the topbar.
