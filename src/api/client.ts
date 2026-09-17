@@ -4,6 +4,7 @@ export type PartyMember = {
   mapX?: number;
   mapY?: number;
   viewedRoomId?: string;
+  foundClues?: string[];
 };
 
 export type CampaignClue = {

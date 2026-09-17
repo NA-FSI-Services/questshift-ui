@@ -10,7 +10,6 @@ type Props = {
   waitMessage?: string | null;
   roomTitle?: string;
   roomNarrative?: string;
-  clues?: { id: string; label: string; text: string }[];
   onCommand: (command: string) => Promise<void>;
   onExport: () => Promise<void>;
   onImport: (body: string) => Promise<void>;
@@ -22,7 +21,6 @@ export function TerminalPanel({
   waitMessage,
   roomTitle,
   roomNarrative,
-  clues,
   onCommand,
   onExport,
   onImport,
@@ -105,13 +103,6 @@ export function TerminalPanel({
           </pre>
         ) : null}
         {waitMessage ? <pre className="sys"># {waitMessage}</pre> : null}
-        {(clues ?? []).map((clue) => (
-          <pre key={clue.id} className="clue">
-            clue · {clue.label}
-            {"\n"}
-            {clue.text}
-          </pre>
-        ))}
         {(session?.commandLog ?? [])
           .filter((row) => row.roomId === session?.currentRoomId)
           .map((row, index) => (

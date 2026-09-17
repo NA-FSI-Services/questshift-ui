@@ -10,6 +10,13 @@ import {
   stepToward,
 } from "../map";
 import {
+  clueDialogBounds,
+  clueDialogVisible,
+  golemBlocksExit,
+  INTERIOR_GOLEM,
+  type ClueDialogCopy,
+} from "../clueDialog";
+import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   frameFor,
@@ -61,6 +68,8 @@ export type BoardClue = {
   x: number;
   y: number;
   roomId: string;
+  label: string;
+  text: string;
 };
 
 export type BoardState = {
@@ -113,6 +122,7 @@ export class DungeonScene extends Phaser.Scene {
   private keyE?: Phaser.Input.Keyboard.Key;
   private keyEnter?: Phaser.Input.Keyboard.Key;
   private keyEsc?: Phaser.Input.Keyboard.Key;
+  private openClue?: ClueDialogCopy;
 
   constructor() {
     super("dungeon");
@@ -177,6 +187,17 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   update() {
+    if (clueDialogVisible(this.openClue)) {
+      if (
+        this.justDown(this.keyE) ||
+        this.justDown(this.keyEnter) ||
+        this.justDown(this.cursors?.space) ||
+        this.justDown(this.keyEsc)
+      ) {
+        this.closeClueDialog();
+      }
+      return;
+    }
     if (!this.board.meName || !this.canvasFocused()) {
       return;
     }
@@ -397,6 +418,9 @@ export class DungeonScene extends Phaser.Scene {
     const door = this.hotspot("door", INTERIOR_DOOR.x, INTERIOR_DOOR.y).setDepth(4);
     door.on("pointerdown", () => this.leaveRoom());
     this.interior.push(door);
+    if (golemBlocksExit(this.localViewed, state.completed)) {
+      this.interior.push(this.place("golem", INTERIOR_GOLEM.x, INTERIOR_GOLEM.y).setDepth(5));
+    }
     state.clues
       .filter((clue) => clue.roomId === this.localViewed && !state.foundClues.includes(clue.id))
       .forEach((clue) => {
@@ -404,6 +428,7 @@ export class DungeonScene extends Phaser.Scene {
         chest.on("pointerdown", () => this.pickClue(clue.id));
         this.interior.push(chest);
       });
+    this.drawClueDialog();
   }
 
   private act() {
@@ -447,9 +472,11 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private pickClue(clueId: string) {
-    if (!this.localViewed || this.board.foundClues.includes(clueId)) {
+    const clue = this.board.clues.find((item) => item.id === clueId);
+    if (!this.localViewed || !clue || this.board.foundClues.includes(clueId)) {
       return;
     }
+    this.openClue = { id: clue.id, label: clue.label, text: clue.text };
     this.board = {
       ...this.board,
       foundClues: [...this.board.foundClues, clueId],
@@ -458,10 +485,66 @@ export class DungeonScene extends Phaser.Scene {
     this.emitPresence(true, clueId);
   }
 
+  private closeClueDialog() {
+    if (!this.openClue) {
+      return;
+    }
+    this.openClue = undefined;
+    this.drawInterior(this.board);
+  }
+
+  private drawClueDialog() {
+    if (!clueDialogVisible(this.openClue) || !this.openClue) {
+      return;
+    }
+    const box = clueDialogBounds();
+    const shade = this.add.graphics().setDepth(18);
+    shade.fillStyle(0x070a09, 0.72);
+    shade.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    shade.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    shade.on("pointerdown", () => this.closeClueDialog());
+    const panel = this.add.graphics().setDepth(19);
+    panel.fillStyle(0x101714, 0.97);
+    panel.fillRoundedRect(box.x, box.y, box.width, box.height, 6);
+    panel.lineStyle(2, 0xe0b25a, 1);
+    panel.strokeRoundedRect(box.x, box.y, box.width, box.height, 6);
+    const title = this.add
+      .text(box.x + box.width / 2, box.y + 16, this.openClue.label, {
+        fontFamily: "IBM Plex Mono",
+        fontSize: "15px",
+        color: "#e0b25a",
+        align: "center",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(20);
+    const body = this.add
+      .text(box.x + 20, box.y + 44, this.openClue.text.trim(), {
+        fontFamily: "IBM Plex Mono",
+        fontSize: "13px",
+        color: "#d7eadb",
+        wordWrap: { width: box.width - 40 },
+      })
+      .setOrigin(0, 0)
+      .setDepth(20);
+    const hint = this.add
+      .text(box.x + box.width / 2, box.y + box.height - 22, "only you can read this · Esc closes", {
+        fontFamily: "IBM Plex Mono",
+        fontSize: "11px",
+        color: "#7f9a86",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(20);
+    this.interior.push(shade, panel, title, body, hint);
+  }
+
   private leaveRoom() {
     if (!this.localViewed) {
       return;
     }
+    this.openClue = undefined;
     const node = this.nodes.find((item) => item.id === this.localViewed);
     this.localViewed = "";
     if (node) {

@@ -17,6 +17,7 @@ import {
 import { createDungeonGame, DungeonScene, type PresencePayload } from "./game/DungeonScene";
 import { isSeatId, suggestAlias } from "./party";
 import { bindPresence } from "./presenceBind";
+import { foundCluesFor } from "./clueDialog";
 import { TerminalPanel } from "./terminal/TerminalPanel";
 import "./App.css";
 
@@ -193,13 +194,15 @@ export default function App() {
       meName: me?.name ?? "",
       inventory: session.inventory,
       missed,
-      foundClues: session.foundClues ?? [],
+      foundClues: foundCluesFor(session.partyMembers, me?.name ?? ""),
       clues: (campaign?.rooms ?? []).flatMap((room) =>
         (room.clues ?? []).map((clue) => ({
           id: clue.id,
           x: clue.x,
           y: clue.y,
           roomId: room.id,
+          label: clue.label,
+          text: clue.text,
         })),
       ),
     });
@@ -471,9 +474,6 @@ export default function App() {
   );
   const viewedRoomId = pose?.viewedRoomId || liveMe?.viewedRoomId || "";
   const viewedRoom = campaign?.rooms.find((room) => room.id === viewedRoomId);
-  const foundClueRows = (viewedRoom?.clues ?? []).filter((clue) =>
-    (session?.foundClues ?? []).includes(clue.id),
-  );
 
   const partyPicker = (
     <div className="party-picker">
@@ -649,8 +649,8 @@ export default function App() {
             onPointerDown={(event) => event.currentTarget.querySelector("canvas")?.focus()}
           />
           <p className="map-help">
-            Click the map, then WASD or arrows to walk. E or Enter enters a room or picks a clue.
-            Esc leaves the room.
+            Click the map, then WASD or arrows to walk. E or Enter enters a room or opens a chest.
+            Chest text is only on your map. Esc leaves the room.
           </p>
           <ul className="seats">
             {(session?.partyMembers?.length ? session.partyMembers : []).map((member) => {
@@ -685,7 +685,6 @@ export default function App() {
           waitMessage={waitMessage}
           roomTitle={viewedRoom?.title}
           roomNarrative={viewedRoom?.narrative}
-          clues={foundClueRows}
           onCommand={onCommand}
           onExport={onExport}
           onImport={onImport}

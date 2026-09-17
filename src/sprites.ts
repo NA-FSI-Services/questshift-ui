@@ -49,6 +49,7 @@ export const SPRITE_FRAMES = {
   loot_iron: 116,
   clue: 89,
   door: 52,
+  golem: 97,
 } as const;
 
 export type SpriteKey = keyof typeof SPRITE_FRAMES;

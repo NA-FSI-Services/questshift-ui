@@ -41,7 +41,7 @@ describe("walkable map contract", () => {
   it("picks an unfound clue in reach", () => {
     const clues = [
       { id: "shell-log", x: 280, y: 220 },
-      { id: "shell-grep", x: 520, y: 200 },
+      { id: "shell-tree", x: 520, y: 200 },
     ];
     expect(clueInReach(280, 220, clues, [])?.id).toBe("shell-log");
     expect(clueInReach(280, 220, clues, ["shell-log"])).toBeUndefined();
