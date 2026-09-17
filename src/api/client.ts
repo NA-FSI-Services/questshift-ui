@@ -69,10 +69,11 @@ export type Campaign = {
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
-type EngineError = Error & { joinCode?: string };
+type EngineError = Error & { joinCode?: string; status?: number };
 
 async function engineError(res: Response, fallback: string): Promise<EngineError> {
   const err = new Error(fallback) as EngineError;
+  err.status = res.status;
   try {
     const body = (await res.json()) as { message?: string; joinCode?: string };
     if (typeof body.message === "string" && body.message.length > 0) {
@@ -154,6 +155,23 @@ export async function addPartyMember(sessionId: string, member: PartyMember): Pr
     throw await engineError(res, "Could not join party");
   }
   return res.json();
+}
+
+export async function leaveParty(sessionId: string, name: string): Promise<GameSession> {
+  const res = await fetch(`/api/sessions/${sessionId}/party?name=${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw await engineError(res, "Could not leave party");
+  }
+  return res.json();
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const res = await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 404) {
+    throw await engineError(res, "Could not delete party");
+  }
 }
 
 export type PresenceUpdate = {

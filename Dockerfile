@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/nginx-124:1-1760621476
+FROM registry.access.redhat.com/ubi9/nginx-124:latest
 
 COPY dist/ /opt/app-root/src/
 COPY nginx/nginx.conf /etc/nginx/nginx.conf

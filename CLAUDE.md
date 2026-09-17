@@ -11,6 +11,6 @@ Read `AGENTS.md` first (this repo), then the docs-repo map.
 - Kenney Tiny Dungeon CC0 only for sprites (`public/assets/`). No AI images. No TTS.
 - Terminal is simulated. Never shell out `oc` / Ansible / Java from the browser.
 - Campaign YAML / engine evaluator decide wins. UI does not invent puzzle answers.
-- One party, cosmetic seats. No multi-party UI.
-- Match `src/api/client.ts` to engine REST; do not add auth or extra verbs.
+- Cosmetic seats. Switch, abandon, and delete parties from the topbar.
+- Match `src/api/client.ts` to engine REST; do not add auth.
 - Do not commit `.env` or API keys. UI has no auth in v1.

@@ -9,6 +9,8 @@ const exportSession = vi.fn();
 const getSession = vi.fn();
 const importSession = vi.fn();
 const addPartyMember = vi.fn();
+const leaveParty = vi.fn();
+const deleteSession = vi.fn();
 const reportPresence = vi.fn();
 const destroy = vi.fn();
 const emit = vi.fn();
@@ -27,6 +29,8 @@ vi.mock("./api/client", () => ({
   getSession: (...args: unknown[]) => getSession(...args),
   importSession: (...args: unknown[]) => importSession(...args),
   addPartyMember: (...args: unknown[]) => addPartyMember(...args),
+  leaveParty: (...args: unknown[]) => leaveParty(...args),
+  deleteSession: (...args: unknown[]) => deleteSession(...args),
   reportPresence: (...args: unknown[]) => reportPresence(...args),
 }));
 
@@ -98,6 +102,8 @@ describe("App", () => {
     listCampaigns.mockResolvedValue([campaign]);
     getSession.mockResolvedValue(session);
     addPartyMember.mockResolvedValue(session);
+    leaveParty.mockResolvedValue({ ...session, partyMembers: [] });
+    deleteSession.mockResolvedValue(undefined);
     URL.createObjectURL = vi.fn(() => "blob:test");
     URL.revokeObjectURL = vi.fn();
   });
@@ -131,19 +137,21 @@ describe("App", () => {
     expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
   });
 
-  it("shows the live join code when Start is refused", async () => {
-    startSession.mockRejectedValue(
-      Object.assign(new Error("A party is already running. Join with thorn-golem."), {
-        joinCode: "thorn-golem",
-      }),
-    );
+  it("starts a second party after leaving the current one", async () => {
+    startSession.mockResolvedValueOnce(session).mockResolvedValueOnce({
+      ...session,
+      id: "s2",
+      joinCode: "iron-ward",
+      partyMembers: [{ name: "Ada", seatId: "guardian" }],
+    });
     const { default: App } = await import("./App");
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
-    expect(
-      await screen.findByText("A party is already running. Join with thorn-golem."),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Join code")).toHaveValue("thorn-golem");
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "new party" }));
+    expect(await screen.findByText("party code iron-ward")).toBeInTheDocument();
+    expect(leaveParty).toHaveBeenCalledWith("s1", "Ada");
+    expect(startSession).toHaveBeenCalledTimes(2);
   });
 
   it("shows a Game Master offline chip when the engine reports YAML fallback", async () => {
@@ -373,5 +381,88 @@ describe("App", () => {
         viewedRoomId: "",
       }),
     );
+  });
+
+  it("switches from a stored party to another join code", async () => {
+    startSession.mockResolvedValue(session);
+    const iron = {
+      ...session,
+      id: "s2",
+      joinCode: "iron-ward",
+      partyMembers: [{ name: "Ada", seatId: "guardian" }],
+    };
+    getSession.mockImplementation(async (id: string) => {
+      if (String(id).toLowerCase().includes("iron")) {
+        return iron;
+      }
+      return session;
+    });
+    addPartyMember.mockResolvedValue(iron);
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Join code"), {
+      target: { value: "iron-ward" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Switch party" }));
+    expect(await screen.findByText("party code iron-ward")).toBeInTheDocument();
+    expect(leaveParty).toHaveBeenCalledWith("s1", "Ada");
+    expect(addPartyMember).toHaveBeenCalledWith("s2", { name: "Ada", seatId: "guardian" });
+  });
+
+  it("abandons the current party", async () => {
+    startSession.mockResolvedValue(session);
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Abandon party" }));
+    await waitFor(() => expect(leaveParty).toHaveBeenCalledWith("s1", "Ada"));
+    expect(screen.queryByText("party code thorn-golem")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "start 60-minute run" })).toBeInTheDocument();
+  });
+
+  it("deletes a party after typing the join code", async () => {
+    startSession.mockResolvedValue(session);
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Delete party"));
+    const confirm = await screen.findByLabelText("Type thorn-golem to confirm");
+    expect(screen.getByRole("button", { name: "Delete this party" })).toBeDisabled();
+    fireEvent.change(confirm, { target: { value: "thorn-golem" } });
+    fireEvent.click(screen.getByRole("button", { name: "Delete this party" }));
+    await waitFor(() => expect(deleteSession).toHaveBeenCalledWith("s1"));
+    expect(screen.queryByText("party code thorn-golem")).not.toBeInTheDocument();
+  });
+
+  it("does not restore an expired stored party", async () => {
+    sessionStorage.setItem(
+      "questshift-me",
+      JSON.stringify({ sessionId: "s1", name: "Ada", seatId: "guardian" }),
+    );
+    getSession.mockResolvedValue({ ...session, status: "expired" });
+    const { default: App } = await import("./App");
+    render(<App />);
+    expect(await screen.findByRole("button", { name: "start 60-minute run" })).toBeInTheDocument();
+    await waitFor(() => expect(getSession).toHaveBeenCalledWith("s1"));
+    expect(screen.queryByText("party code thorn-golem")).not.toBeInTheDocument();
+    expect(sessionStorage.getItem("questshift-me")).toBeNull();
+  });
+
+  it("clears the local party when the engine returns 404", async () => {
+    startSession.mockResolvedValue(session);
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    getSession.mockRejectedValue(Object.assign(new Error("Unknown join code"), { status: 404 }));
+    await waitFor(
+      () => expect(screen.queryByText("party code thorn-golem")).not.toBeInTheDocument(),
+      { timeout: 2500 },
+    );
+    expect(screen.getByRole("button", { name: "start 60-minute run" })).toBeInTheDocument();
   });
 });

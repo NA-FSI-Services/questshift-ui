@@ -5,8 +5,9 @@ import {
   exportSession,
   getSession,
   importSession,
+  leaveParty,
+  deleteSession,
   listCampaigns,
-  reportPresence,
   startSession,
   submitCommand,
 } from "./client";
@@ -65,19 +66,18 @@ describe("engine client", () => {
     await expect(startSession([])).rejects.toThrow("Could not start session");
   });
 
-  it("surfaces a 409 join code when a party is already running", async () => {
+  it("surfaces engine error bodies", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
       status: 409,
       json: async () => ({
-        error: "party_active",
-        message: "A party is already running. Join with thorn-golem.",
-        joinCode: "thorn-golem",
+        error: "party_full",
+        message: "The party is full (8).",
       }),
     } as Response);
     await expect(startSession([])).rejects.toMatchObject({
-      message: "A party is already running. Join with thorn-golem.",
-      joinCode: "thorn-golem",
+      message: "The party is full (8).",
+      status: 409,
     });
   });
 
@@ -171,7 +171,42 @@ describe("engine client", () => {
 
   it("maps a missing session to an unknown join code", async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false, status: 404 } as Response);
-    await expect(getSession("nope")).rejects.toThrow("Unknown join code");
+    await expect(getSession("nope")).rejects.toMatchObject({
+      message: "Unknown join code",
+      status: 404,
+    });
+  });
+
+  it("leaves a party by alias", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => session,
+    } as Response);
+    await expect(leaveParty("s1", "Ada")).resolves.toEqual(session);
+    expect(fetch).toHaveBeenCalledWith("/api/sessions/s1/party?name=Ada", {
+      method: "DELETE",
+    });
+  });
+
+  it("throws when leave fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
+    await expect(leaveParty("s1", "Ada")).rejects.toThrow("Could not leave party");
+  });
+
+  it("deletes a party", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, status: 204 } as Response);
+    await expect(deleteSession("s1")).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith("/api/sessions/s1", { method: "DELETE" });
+  });
+
+  it("treats a missing party as already deleted", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 404 } as Response);
+    await expect(deleteSession("s1")).resolves.toBeUndefined();
+  });
+
+  it("throws when delete fails", async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 500 } as Response);
+    await expect(deleteSession("s1")).rejects.toThrow("Could not delete party");
   });
 
   it("imports json when the body starts with a brace", async () => {

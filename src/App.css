@@ -6,6 +6,7 @@
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   align-items: baseline;
   padding: 0.9rem 1.2rem;
@@ -166,6 +167,48 @@
   color: #ffd0c4;
   border: 1px solid var(--fail);
   font-size: 0.85rem;
+}
+
+.danger-zone {
+  flex: 0 1 18rem;
+  border: 1px solid #8a3030;
+  padding: 0.35rem 0.55rem;
+  background: #241010;
+  color: #e8a0a0;
+  font-size: 0.85rem;
+}
+
+.danger-zone summary {
+  cursor: pointer;
+  color: #e8a0a0;
+}
+
+.danger-zone p {
+  color: #e8a0a0;
+  flex: 1 1 100%;
+  margin: 0.35rem 0;
+}
+
+.danger-zone label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: baseline;
+  margin: 0.35rem 0;
+}
+
+.danger-zone input {
+  background: #050a08;
+  color: var(--ink);
+  border: 1px solid #8a3030;
+  padding: 0.35rem 0.5rem;
+  width: 9.5rem;
+}
+
+.topbar button.danger {
+  background: #3a1616;
+  border-color: #8a3030;
+  color: #e8a0a0;
 }
 
 .banner {

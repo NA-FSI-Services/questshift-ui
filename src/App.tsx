@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addPartyMember,
+  deleteSession,
   exportSession,
   getSession,
   importSession,
+  leaveParty,
   listCampaigns,
   reportPresence,
   startSession,
@@ -20,7 +22,7 @@ import "./App.css";
 
 const ME_KEY = "questshift-me";
 
-type Pending = "start" | "join" | "command" | "import" | null;
+type Pending = "start" | "join" | "command" | "import" | "leave" | "delete" | null;
 
 type StoredMe = { sessionId: string; name: string; seatId: string };
 
@@ -61,6 +63,7 @@ export default function App() {
   const [pending, setPending] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
   const [joinDraft, setJoinDraft] = useState("");
+  const [deleteDraft, setDeleteDraft] = useState("");
   const [seatId, setSeatId] = useState("guardian");
   const [alias, setAlias] = useState(() => suggestAlias("guardian", []));
   const [aliasTouched, setAliasTouched] = useState(false);
@@ -103,16 +106,28 @@ export default function App() {
     }
     void getSession(stored.sessionId)
       .then((live) => {
+        if (live.status !== "active") {
+          sessionStorage.removeItem(ME_KEY);
+          return;
+        }
         const member = live.partyMembers.find(
           (item) => item.name.trim().toLowerCase() === stored.name.trim().toLowerCase(),
         );
         if (!member) {
+          sessionStorage.removeItem(ME_KEY);
           return;
         }
+        sessionRef.current = live;
+        meRef.current = member;
         setSession(live);
         setMe(member);
+        setAlias(member.name);
+        setAliasTouched(true);
+        setJoinDraft(live.joinCode ?? "");
       })
-      .catch(() => undefined);
+      .catch(() => {
+        sessionStorage.removeItem(ME_KEY);
+      });
   }, []);
 
   useEffect(() => {
@@ -197,14 +212,29 @@ export default function App() {
     const timer = window.setInterval(() => {
       void getSession(session.id)
         .then(setSession)
-        .catch(() => undefined);
+        .catch((err: unknown) => {
+          const status =
+            err && typeof err === "object" && "status" in err
+              ? Number((err as { status?: number }).status)
+              : 0;
+          if (status === 404) {
+            sessionStorage.removeItem(ME_KEY);
+            sessionRef.current = null;
+            meRef.current = null;
+            setSession(null);
+            setMe(null);
+            setPose(null);
+            setMissed(false);
+            setDeleteDraft("");
+          }
+        });
     }, 1000);
     return () => window.clearInterval(timer);
   }, [session?.id]);
 
   useEffect(() => {
     const code = joinDraft.trim();
-    if (!code.includes("-") || session) {
+    if (!code.includes("-")) {
       setTakenAliases([]);
       return;
     }
@@ -223,7 +253,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [joinDraft, session]);
+  }, [joinDraft]);
 
   useEffect(() => {
     if (aliasTouched) {
@@ -232,13 +262,42 @@ export default function App() {
     setAlias(suggestAlias(seatId, takenAliases));
   }, [seatId, takenAliases, aliasTouched]);
 
+  function dropLocal() {
+    sessionStorage.removeItem(ME_KEY);
+    sessionRef.current = null;
+    meRef.current = null;
+    setSession(null);
+    setMe(null);
+    setPose(null);
+    setMissed(false);
+    setDeleteDraft("");
+  }
+
   function claim(live: GameSession, member: PartyMember) {
     sessionRef.current = live;
     meRef.current = member;
     setPose(null);
     setSession(live);
     setMe(member);
+    setAlias(member.name);
+    setAliasTouched(true);
+    setJoinDraft(live.joinCode ?? "");
     writeStoredMe(live.id, member);
+  }
+
+  async function leaveCurrent(): Promise<void> {
+    const live = sessionRef.current;
+    const who = meRef.current;
+    if (!live || !who) {
+      dropLocal();
+      return;
+    }
+    try {
+      await leaveParty(live.id, who.name);
+    } catch {
+      // Already gone or expired lookup failed.
+    }
+    dropLocal();
   }
 
   async function begin() {
@@ -251,15 +310,10 @@ export default function App() {
     setError(null);
     setMissed(false);
     try {
+      await leaveCurrent();
       claim(await startSession([member]), member);
     } catch (err) {
       setError(err instanceof Error ? err.message : "start failed");
-      if (err && typeof err === "object" && "joinCode" in err) {
-        const code = (err as { joinCode?: string }).joinCode;
-        if (code) {
-          setJoinDraft(code);
-        }
-      }
     } finally {
       setPending(null);
     }
@@ -277,6 +331,10 @@ export default function App() {
     setMissed(false);
     try {
       const live = await getSession(code);
+      const current = sessionRef.current;
+      if (current && current.id !== live.id) {
+        await leaveCurrent();
+      }
       const joined = await addPartyMember(live.id, member);
       const mine =
         joined.partyMembers.find(
@@ -285,6 +343,37 @@ export default function App() {
       claim(joined, mine);
     } catch (err) {
       setError(err instanceof Error ? err.message : "join failed");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function abandon() {
+    setPending("leave");
+    setError(null);
+    try {
+      await leaveCurrent();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "leave failed");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function destroyParty() {
+    const live = sessionRef.current;
+    const code = live?.joinCode ?? "";
+    if (!live || deleteDraft.trim().toLowerCase() !== code.toLowerCase()) {
+      setError("Type the join code to delete this party.");
+      return;
+    }
+    setPending("delete");
+    setError(null);
+    try {
+      await deleteSession(live.id);
+      dropLocal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "delete failed");
     } finally {
       setPending(null);
     }
@@ -369,7 +458,11 @@ export default function App() {
           ? "The Game Master is answering…"
           : pending === "import"
             ? "Restoring session…"
-            : null;
+            : pending === "leave"
+              ? "Leaving party…"
+              : pending === "delete"
+                ? "Deleting party…"
+                : null;
   const startLabel =
     pending === "start" ? "starting…" : session ? "new party" : "start 60-minute run";
 
@@ -387,6 +480,63 @@ export default function App() {
       <header className="topbar">
         <h1>QuestShift</h1>
         <p>{campaign?.metadata.title ?? "The Cluster That Forgot Its Name"}</p>
+        <div className="party-picker">
+          <fieldset className="seat-picker">
+            <legend>Character</legend>
+            {(campaign?.seats ?? []).map((seat) => (
+              <button
+                key={seat.id}
+                type="button"
+                className={seatId === seat.id ? "seat-pick selected" : "seat-pick"}
+                aria-pressed={seatId === seat.id}
+                disabled={busy}
+                onClick={() => setSeatId(seat.id)}
+              >
+                {seat.title}
+              </button>
+            ))}
+          </fieldset>
+          <label>
+            Alias
+            <input
+              value={alias}
+              onChange={(event) => {
+                setAliasTouched(true);
+                setAlias(event.target.value);
+              }}
+              autoComplete="off"
+              disabled={busy}
+            />
+          </label>
+        </div>
+        <form className="join-form" onSubmit={(event) => void join(event)}>
+          <label>
+            Join code
+            <input
+              value={joinDraft}
+              onChange={(event) => setJoinDraft(event.target.value)}
+              placeholder="thorn-golem"
+              autoComplete="off"
+              disabled={busy}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy || !joinDraft.trim() || !alias.trim()}
+            aria-busy={pending === "join"}
+          >
+            {pending === "join" ? (
+              <>
+                <BusyMark />
+                joining…
+              </>
+            ) : session ? (
+              "Switch party"
+            ) : (
+              "Join"
+            )}
+          </button>
+        </form>
         {session?.joinCode ? (
           <p className="party-code">
             <span>party code {session.joinCode}</span>
@@ -394,65 +544,7 @@ export default function App() {
               Copy code
             </button>
           </p>
-        ) : (
-          <>
-            <div className="party-picker">
-              <fieldset className="seat-picker">
-                <legend>Character</legend>
-                {(campaign?.seats ?? []).map((seat) => (
-                  <button
-                    key={seat.id}
-                    type="button"
-                    className={seatId === seat.id ? "seat-pick selected" : "seat-pick"}
-                    aria-pressed={seatId === seat.id}
-                    disabled={busy}
-                    onClick={() => setSeatId(seat.id)}
-                  >
-                    {seat.title}
-                  </button>
-                ))}
-              </fieldset>
-              <label>
-                Alias
-                <input
-                  value={alias}
-                  onChange={(event) => {
-                    setAliasTouched(true);
-                    setAlias(event.target.value);
-                  }}
-                  autoComplete="off"
-                  disabled={busy}
-                />
-              </label>
-            </div>
-            <form className="join-form" onSubmit={(event) => void join(event)}>
-              <label>
-                Join code
-                <input
-                  value={joinDraft}
-                  onChange={(event) => setJoinDraft(event.target.value)}
-                  placeholder="thorn-golem"
-                  autoComplete="off"
-                  disabled={busy}
-                />
-              </label>
-              <button
-                type="submit"
-                disabled={busy || !joinDraft.trim() || !alias.trim()}
-                aria-busy={pending === "join"}
-              >
-                {pending === "join" ? (
-                  <>
-                    <BusyMark />
-                    joining…
-                  </>
-                ) : (
-                  "Join"
-                )}
-              </button>
-            </form>
-          </>
-        )}
+        ) : null}
         <button
           type="button"
           onClick={() => void begin()}
@@ -462,6 +554,42 @@ export default function App() {
           {pending === "start" ? <BusyMark /> : null}
           {startLabel}
         </button>
+        {session ? (
+          <button
+            type="button"
+            onClick={() => void abandon()}
+            disabled={busy}
+            aria-busy={pending === "leave"}
+          >
+            {pending === "leave" ? <BusyMark /> : null}
+            Abandon party
+          </button>
+        ) : null}
+        {session?.joinCode ? (
+          <details className="danger-zone">
+            <summary>Delete party</summary>
+            <p>This ends the hour for everyone on {session.joinCode}.</p>
+            <label>
+              Type {session.joinCode} to confirm
+              <input
+                value={deleteDraft}
+                onChange={(event) => setDeleteDraft(event.target.value)}
+                autoComplete="off"
+                disabled={busy}
+              />
+            </label>
+            <button
+              type="button"
+              className="danger"
+              disabled={busy || deleteDraft.trim().toLowerCase() !== session.joinCode.toLowerCase()}
+              aria-busy={pending === "delete"}
+              onClick={() => void destroyParty()}
+            >
+              {pending === "delete" ? <BusyMark /> : null}
+              Delete this party
+            </button>
+          </details>
+        ) : null}
         {waitMessage ? (
           <p className="busy-status" role="status">
             <BusyMark />
