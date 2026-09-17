@@ -51,10 +51,15 @@ export function TerminalPanel({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [log]);
 
+  const hourOver = session?.status === "complete" || session?.status === "expired";
+  const clock = session
+    ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s`
+    : "--";
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const command = draft.trim();
-    if (!command || !session) {
+    if (!command || !session || hourOver) {
       return;
     }
     setDraft("");
@@ -83,9 +88,7 @@ export function TerminalPanel({
             </span>
           ) : null}
           <span className="clock">
-            {session
-              ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s`
-              : "--"}
+            {session ? (hourOver ? `${clock} · stopped` : clock) : "--"}
           </span>
         </span>
       </header>
@@ -117,6 +120,11 @@ export function TerminalPanel({
               {row.passed ? "accepted" : "failed"}
             </pre>
           ))}
+        {session?.status === "complete" && session.adventureSummary?.prose ? (
+          <pre className="sys recap" role="status">
+            {session.adventureSummary.prose}
+          </pre>
+        ) : null}
         <div ref={endRef} />
       </div>
       <form onSubmit={onSubmit} className="prompt-row">
@@ -127,7 +135,7 @@ export function TerminalPanel({
         <textarea
           id="command"
           value={draft}
-          disabled={!session || busy}
+          disabled={!session || busy || hourOver}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -138,13 +146,15 @@ export function TerminalPanel({
           placeholder={
             waitMessage
               ? waitMessage
-              : session
-                ? "type a command, YAML, oc, or Java snippet…"
-                : "start a session first"
+              : hourOver
+                ? "the hour is complete"
+                : session
+                  ? "type a command, YAML, oc, or Java snippet…"
+                  : "start a session first"
           }
           rows={3}
         />
-        <button type="submit" disabled={!session || busy}>
+        <button type="submit" disabled={!session || busy || hourOver}>
           send
         </button>
       </form>

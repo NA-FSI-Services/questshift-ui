@@ -24,6 +24,21 @@ export type CommandLogEntry = {
   message?: string;
 };
 
+export type StageClear = {
+  roomId: string;
+  roomTitle: string;
+  name: string;
+};
+
+export type AdventureSummary = {
+  mostQuestions?: string;
+  mostQuestionsCount?: number;
+  mostCommands?: string;
+  mostCommandsCount?: number;
+  stages?: StageClear[];
+  prose?: string;
+};
+
 export type GameSession = {
   id: string;
   joinCode?: string;
@@ -41,6 +56,7 @@ export type GameSession = {
   yamlFallback?: boolean;
   commandLog?: CommandLogEntry[];
   foundClues?: string[];
+  adventureSummary?: AdventureSummary;
 };
 
 export type CommandResult = {

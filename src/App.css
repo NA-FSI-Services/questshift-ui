@@ -403,6 +403,10 @@
   color: var(--muted);
 }
 
+.log .recap {
+  color: var(--amber);
+}
+
 .log .board {
   color: #e8f8ea;
 }

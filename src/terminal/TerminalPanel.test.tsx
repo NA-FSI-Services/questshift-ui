@@ -219,6 +219,37 @@ describe("TerminalPanel", () => {
     expect(screen.queryByText(/Moss · ranger/)).not.toBeInTheDocument();
   });
 
+  it("stops the clock and shows the adventure recap when complete", () => {
+    render(
+      <TerminalPanel
+        session={{
+          ...session,
+          status: "complete",
+          elapsedSeconds: 754,
+          adventureSummary: {
+            mostQuestions: "Ada",
+            mostQuestionsCount: 2,
+            mostCommands: "Linus",
+            mostCommandsCount: 5,
+            prose:
+              "The hour is complete.\nAda asked the most questions (2).\nLinus tried the most commands (5).\nWho cleared each stage:\n- The Broken Shell — Ada",
+          },
+        }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("12m 34s · stopped")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("The hour is complete");
+    expect(screen.getByRole("status")).toHaveTextContent("Ada asked the most questions (2)");
+    expect(screen.getByRole("status")).toHaveTextContent("Linus tried the most commands (5)");
+    expect(screen.getByRole("status")).toHaveTextContent("The Broken Shell — Ada");
+    expect(screen.getByRole("button", { name: "send" })).toBeDisabled();
+    expect(screen.getByPlaceholderText("the hour is complete")).toBeInTheDocument();
+  });
+
   it("shows the room description without dumping chest text", () => {
     render(
       <TerminalPanel

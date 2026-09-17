@@ -108,7 +108,7 @@ export default function App() {
     }
     void getSession(stored.sessionId)
       .then((live) => {
-        if (live.status !== "active") {
+        if (live.status !== "active" && live.status !== "complete") {
           sessionStorage.removeItem(ME_KEY);
           return;
         }
