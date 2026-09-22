@@ -53,7 +53,7 @@ describe("engine client", () => {
       json: async () => session,
     } as Response);
     const party = [{ name: "Ada", seatId: "guardian" }];
-    await expect(startSession(party)).resolves.toEqual(session);
+    await expect(startSession(party, "devops-dungeon")).resolves.toEqual(session);
     expect(fetch).toHaveBeenCalledWith("/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

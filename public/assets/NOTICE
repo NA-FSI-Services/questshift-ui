@@ -25,8 +25,17 @@ Source: https://kenney.nl/assets/music-jingles
 Vendored as:
   kenney/sfx/quest_complete.{ogg,wav} ← jingles_NES03.ogg (completing a room)
 
-Kenney license text for the four clips: kenney/sfx/LICENSE.txt
+Kenney Music Loops 1.1
+Creator: Kenney (www.kenney.nl)
+License: Creative Commons Zero 1.0 Universal
+Source: Kenney Music Loops (1.1), 31-07-2015
+Vendored as:
+  kenney/music/lobby.{ogg,wav}   ← Wacky Waiting.ogg (pre-run lobby bed)
+  kenney/music/dungeon.{ogg,wav} ← Infinite Descent.ogg (in-run bed, quieter)
+Kenney license text: kenney/music/LICENSE.txt
+
+Kenney license text for the four map clips: kenney/sfx/LICENSE.txt
 
 Attribution is not required by CC0; QuestShift credits Kenney.nl anyway.
 Do not replace this sheet or these clips with AI-generated assets.
-No TTS / Web Speech — these files are short map SFX only.
+No TTS / Web Speech. Map SFX stay short. The two music files are looping beds.

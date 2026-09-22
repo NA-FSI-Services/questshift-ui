@@ -15,9 +15,11 @@ import {
   type PartyMember,
 } from "./api/client";
 import { createDungeonGame, DungeonScene, type PresencePayload } from "./game/DungeonScene";
+import { Lobby } from "./lobby/Lobby";
 import { isSeatId, suggestAlias } from "./party";
 import { bindPresence } from "./presenceBind";
 import { foundCluesFor } from "./clueDialog";
+import { musicBed } from "./sounds";
 import { TerminalPanel } from "./terminal/TerminalPanel";
 import "./App.css";
 
@@ -54,10 +56,29 @@ function writeStoredMe(sessionId: string, member: PartyMember) {
   );
 }
 
+function MuteControl() {
+  const [muted, setMuted] = useState(() => musicBed.isMuted());
+  useEffect(() => musicBed.subscribe(() => setMuted(musicBed.isMuted())), []);
+  return (
+    <button
+      type="button"
+      className="mute-toggle"
+      aria-pressed={muted}
+      onClick={() => {
+        musicBed.unlock();
+        musicBed.setMuted(!muted);
+      }}
+    >
+      {muted ? "Unmute music" : "Mute music"}
+    </button>
+  );
+}
+
 export default function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<ReturnType<typeof createDungeonGame> | null>(null);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState("devops-dungeon");
   const [session, setSession] = useState<GameSession | null>(null);
   const [me, setMe] = useState<PartyMember | null>(null);
   const [missed, setMissed] = useState(false);
@@ -69,6 +90,7 @@ export default function App() {
   const [alias, setAlias] = useState(() => suggestAlias("guardian", []));
   const [aliasTouched, setAliasTouched] = useState(false);
   const [takenAliases, setTakenAliases] = useState<string[]>([]);
+  const [joinCampaignId, setJoinCampaignId] = useState<string | null>(null);
   const [pose, setPose] = useState<{
     mapX: number;
     mapY: number;
@@ -77,10 +99,31 @@ export default function App() {
   const sessionRef = useRef<GameSession | null>(null);
   const meRef = useRef<PartyMember | null>(null);
 
+  const campaign =
+    campaigns.find((item) => item.metadata.id === (session?.campaignId ?? selectedCampaignId)) ??
+    campaigns[0] ??
+    null;
+  const inPlay = Boolean(session);
+  const joinLocksQuest = Boolean(joinCampaignId) && !session;
+
   useEffect(() => {
     sessionRef.current = session;
     meRef.current = me;
   }, [session, me]);
+
+  useEffect(() => {
+    const unlock = () => musicBed.unlock();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    musicBed.setScene(session ? "dungeon" : "lobby");
+  }, [session]);
 
   const nodes = useMemo(
     () =>
@@ -97,7 +140,14 @@ export default function App() {
 
   useEffect(() => {
     listCampaigns()
-      .then((all) => setCampaign(all[0] ?? null))
+      .then((all) => {
+        setCampaigns(all);
+        setSelectedCampaignId((current) =>
+          all.some((item) => item.metadata.id === current)
+            ? current
+            : (all[0]?.metadata.id ?? current),
+        );
+      })
       .catch((err: Error) => setError(err.message));
   }, []);
 
@@ -126,6 +176,7 @@ export default function App() {
         setAlias(member.name);
         setAliasTouched(true);
         setJoinDraft(live.joinCode ?? "");
+        setSelectedCampaignId(live.campaignId);
       })
       .catch(() => {
         sessionStorage.removeItem(ME_KEY);
@@ -133,7 +184,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!hostRef.current || nodes.length === 0) {
+    if (!session || !hostRef.current || nodes.length === 0) {
       return;
     }
     gameRef.current?.destroy(true);
@@ -160,7 +211,9 @@ export default function App() {
       game.destroy(true);
       gameRef.current = null;
     };
-  }, [nodes]);
+    // session?.id: do not recreate Phaser on every 1s poll snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session object identity changes each poll
+  }, [session?.id, nodes]);
 
   useEffect(() => {
     if (!session || !gameRef.current) {
@@ -241,6 +294,7 @@ export default function App() {
     const code = joinDraft.trim();
     if (!code.includes("-")) {
       setTakenAliases([]);
+      setJoinCampaignId(null);
       return;
     }
     let cancelled = false;
@@ -248,11 +302,14 @@ export default function App() {
       .then((live) => {
         if (!cancelled) {
           setTakenAliases(live.partyMembers.map((member) => member.name));
+          setJoinCampaignId(live.campaignId);
+          setSelectedCampaignId(live.campaignId);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setTakenAliases([]);
+          setJoinCampaignId(null);
         }
       });
     return () => {
@@ -276,6 +333,8 @@ export default function App() {
     setPose(null);
     setMissed(false);
     setDeleteDraft("");
+    setJoinDraft("");
+    setAliasTouched(false);
   }
 
   function claim(live: GameSession, member: PartyMember) {
@@ -287,6 +346,7 @@ export default function App() {
     setAlias(member.name);
     setAliasTouched(true);
     setJoinDraft(live.joinCode ?? "");
+    setSelectedCampaignId(live.campaignId);
     writeStoredMe(live.id, member);
   }
 
@@ -316,7 +376,7 @@ export default function App() {
     setMissed(false);
     try {
       await leaveCurrent();
-      claim(await startSession([member]), member);
+      claim(await startSession([member], selectedCampaignId), member);
     } catch (err) {
       setError(err instanceof Error ? err.message : "start failed");
     } finally {
@@ -329,6 +389,7 @@ export default function App() {
     const code = joinDraft.trim();
     const member: PartyMember = { name: alias.trim(), seatId };
     if (!code || !member.name || !isSeatId(member.seatId)) {
+      setError("Pick a character and a unique alias.");
       return;
     }
     setPending("join");
@@ -353,7 +414,7 @@ export default function App() {
     }
   }
 
-  async function abandon() {
+  async function returnToLobby() {
     setPending("leave");
     setError(null);
     try {
@@ -468,8 +529,6 @@ export default function App() {
               : pending === "delete"
                 ? "Deleting party…"
                 : null;
-  const startLabel =
-    pending === "start" ? "starting…" : session ? "new party" : "start 60-minute run";
 
   const liveMe = session?.partyMembers.find(
     (member) => member.name.trim().toLowerCase() === (me?.name ?? "").trim().toLowerCase(),
@@ -477,82 +536,21 @@ export default function App() {
   const viewedRoomId = pose?.viewedRoomId || liveMe?.viewedRoomId || "";
   const viewedRoom = campaign?.rooms.find((room) => room.id === viewedRoomId);
 
-  const partyPicker = (
-    <div className="party-picker">
-      <fieldset className="seat-picker">
-        <legend>Character</legend>
-        {(campaign?.seats ?? []).map((seat) => (
-          <button
-            key={seat.id}
-            type="button"
-            className={seatId === seat.id ? "seat-pick selected" : "seat-pick"}
-            aria-pressed={seatId === seat.id}
-            disabled={busy}
-            onClick={() => setSeatId(seat.id)}
-          >
-            {seat.title}
-          </button>
-        ))}
-      </fieldset>
-      <label>
-        Alias
-        <input
-          value={alias}
-          onChange={(event) => {
-            setAliasTouched(true);
-            setAlias(event.target.value);
-          }}
-          autoComplete="off"
-          disabled={busy}
-        />
-      </label>
-    </div>
-  );
-
-  const joinForm = (
-    <form className="join-form" onSubmit={(event) => void join(event)}>
-      <label>
-        Join code
-        <input
-          value={joinDraft}
-          onChange={(event) => setJoinDraft(event.target.value)}
-          placeholder="thorn-golem"
-          autoComplete="off"
-          disabled={busy}
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={busy || !joinDraft.trim() || !alias.trim()}
-        aria-busy={pending === "join"}
-      >
-        {pending === "join" ? (
-          <>
-            <BusyMark />
-            joining…
-          </>
-        ) : session ? (
-          "Switch party"
-        ) : (
-          "Join"
-        )}
-      </button>
-    </form>
-  );
-
   return (
     <div className="shell">
       <header className="topbar">
         <h1>QuestShift</h1>
-        <p className="campaign-title">
-          {campaign?.metadata.title ?? "The Cluster That Forgot Its Name"}
-        </p>
+        {inPlay ? (
+          <p className="campaign-title">
+            {campaign?.metadata.title ?? "The Cluster That Forgot Its Name"}
+          </p>
+        ) : (
+          <p className="campaign-title">Quest lobby</p>
+        )}
         {session ? (
           <details className="party-menu">
             <summary>Party {session.joinCode ?? ""}</summary>
             <div className="party-menu-body">
-              {partyPicker}
-              {joinForm}
               {session.joinCode ? (
                 <p className="party-code">
                   <span>party code {session.joinCode}</span>
@@ -562,18 +560,21 @@ export default function App() {
                 </p>
               ) : null}
               <div className="party-menu-actions">
-                <button
-                  type="button"
-                  onClick={() => void begin()}
-                  disabled={busy || !alias.trim()}
-                  aria-busy={pending === "start"}
-                >
-                  {pending === "start" ? <BusyMark /> : null}
-                  {startLabel}
+                <button type="button" onClick={() => void returnToLobby()} disabled={busy}>
+                  Switch party
                 </button>
                 <button
                   type="button"
-                  onClick={() => void abandon()}
+                  onClick={() => void returnToLobby()}
+                  disabled={busy}
+                  aria-busy={pending === "leave"}
+                >
+                  {pending === "leave" ? <BusyMark /> : null}
+                  new party
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void returnToLobby()}
                   disabled={busy}
                   aria-busy={pending === "leave"}
                 >
@@ -610,21 +611,8 @@ export default function App() {
               ) : null}
             </div>
           </details>
-        ) : (
-          <>
-            {partyPicker}
-            {joinForm}
-            <button
-              type="button"
-              onClick={() => void begin()}
-              disabled={busy || !alias.trim()}
-              aria-busy={pending === "start"}
-            >
-              {pending === "start" ? <BusyMark /> : null}
-              {startLabel}
-            </button>
-          </>
-        )}
+        ) : null}
+        <MuteControl />
         {waitMessage ? (
           <p className="busy-status" role="status">
             <BusyMark />
@@ -642,56 +630,71 @@ export default function App() {
         ) : null}
       </header>
       {error ? <p className="banner">{error}</p> : null}
-      <main className="dual">
-        <section className="canvas-panel" aria-label="Game canvas">
-          <div
-            ref={hostRef}
-            className="phaser-host"
-            tabIndex={0}
-            onPointerDown={(event) => event.currentTarget.querySelector("canvas")?.focus()}
-          />
-          <p className="map-help">
-            Click the map, then WASD or arrows to walk. E or Enter enters a room or opens a chest.
-            Chest text is only on your map. Esc leaves the room.
-          </p>
-          <ul className="seats">
-            {(session?.partyMembers?.length ? session.partyMembers : []).map((member) => {
-              const seat = campaign?.seats.find((item) => item.id === member.seatId);
-              const inside = (member.viewedRoomId ?? "").trim();
-              const room = campaign?.rooms.find((item) => item.id === inside);
-              return (
-                <li key={`${member.seatId}-${member.name}`}>
-                  <i style={{ background: seat?.color ?? "#7f9a86" }} />
-                  {member.name}
-                  {seat ? ` · ${seat.title}` : ""}
-                  {room ? ` · in ${room.title}` : ""}
-                </li>
-              );
-            })}
-            {!session
-              ? (campaign?.seats ?? []).map((seat) => (
-                  <li key={seat.id}>
-                    <i style={{ background: seat.color }} />
-                    {seat.title}
+      {inPlay ? (
+        <main className="dual">
+          <section className="canvas-panel" aria-label="Game canvas">
+            <div
+              ref={hostRef}
+              className="phaser-host"
+              tabIndex={0}
+              onPointerDown={(event) => event.currentTarget.querySelector("canvas")?.focus()}
+            />
+            <p className="map-help">
+              Click the map, then WASD or arrows to walk. E or Enter enters a room or opens a chest.
+              Chest text is only on your map. Esc leaves the room.
+            </p>
+            <ul className="seats">
+              {(session?.partyMembers?.length ? session.partyMembers : []).map((member) => {
+                const seat = campaign?.seats.find((item) => item.id === member.seatId);
+                const inside = (member.viewedRoomId ?? "").trim();
+                const room = campaign?.rooms.find((item) => item.id === inside);
+                return (
+                  <li key={`${member.seatId}-${member.name}`}>
+                    <i style={{ background: seat?.color ?? "#7f9a86" }} />
+                    {member.name}
+                    {seat ? ` · ${seat.title}` : ""}
+                    {room ? ` · in ${room.title}` : ""}
                   </li>
-                ))
-              : null}
-          </ul>
-          {session ? (
-            <p className="loot">inventory: {session.inventory.join(", ") || "empty"}</p>
-          ) : null}
-        </section>
-        <TerminalPanel
-          session={session}
+                );
+              })}
+            </ul>
+            {session ? (
+              <p className="loot">inventory: {session.inventory.join(", ") || "empty"}</p>
+            ) : null}
+          </section>
+          <TerminalPanel
+            session={session}
+            busy={busy}
+            waitMessage={waitMessage}
+            roomTitle={viewedRoom?.title}
+            roomNarrative={viewedRoom?.narrative}
+            onCommand={onCommand}
+            onExport={onExport}
+            onImport={onImport}
+          />
+        </main>
+      ) : (
+        <Lobby
+          campaigns={campaigns}
+          selectedCampaignId={selectedCampaignId}
+          joinLocksQuest={joinLocksQuest}
+          seatId={seatId}
+          alias={alias}
+          joinDraft={joinDraft}
           busy={busy}
-          waitMessage={waitMessage}
-          roomTitle={viewedRoom?.title}
-          roomNarrative={viewedRoom?.narrative}
-          onCommand={onCommand}
-          onExport={onExport}
+          pending={pending === "command" ? null : pending}
+          onSelectCampaign={setSelectedCampaignId}
+          onSeat={setSeatId}
+          onAlias={(value) => {
+            setAliasTouched(true);
+            setAlias(value);
+          }}
+          onJoinDraft={setJoinDraft}
+          onStart={() => void begin()}
+          onJoin={(event) => void join(event)}
           onImport={onImport}
         />
-      </main>
+      )}
     </div>
   );
 }

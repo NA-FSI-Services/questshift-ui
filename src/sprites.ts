@@ -8,6 +8,10 @@ export const TILE_SIZE = 16;
 
 export const SHEET_SPACING = 0;
 
+export const SHEET_COLUMNS = 12;
+
+export const SHEET_ROWS = 11;
+
 export const SPRITE_SCALE = 3;
 
 export const TILE_DISPLAY = TILE_SIZE * SPRITE_SCALE;
@@ -81,6 +85,32 @@ export const GUARDIAN_SPRITE_KEYS: Record<string, SpriteKey> = {
 
 export function frameFor(key: SpriteKey): number {
   return SPRITE_FRAMES[key];
+}
+
+/** CSS background-position for a packed Kenney frame (lobby seat buttons). */
+export function spriteSheetStyle(
+  frame: number,
+  display = TILE_DISPLAY,
+): {
+  width: number;
+  height: number;
+  backgroundImage: string;
+  backgroundRepeat: string;
+  backgroundSize: string;
+  backgroundPosition: string;
+  imageRendering: "pixelated";
+} {
+  const col = frame % SHEET_COLUMNS;
+  const row = Math.floor(frame / SHEET_COLUMNS);
+  return {
+    width: display,
+    height: display,
+    backgroundImage: `url(${TINY_DUNGEON_PATH})`,
+    backgroundRepeat: "no-repeat",
+    backgroundSize: `${SHEET_COLUMNS * display}px ${SHEET_ROWS * display}px`,
+    backgroundPosition: `-${col * display}px -${row * display}px`,
+    imageRendering: "pixelated",
+  };
 }
 
 export function guardianSpriteKey(roomId: string, authored?: string): SpriteKey {

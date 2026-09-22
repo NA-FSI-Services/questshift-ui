@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Campaign, GameSession } from "./api/client";
+import { musicBed } from "./sounds";
 
 const listCampaigns = vi.fn();
 const startSession = vi.fn();
@@ -43,7 +44,11 @@ const campaign: Campaign = {
   metadata: {
     id: "devops-dungeon",
     title: "The Cluster That Forgot Its Name",
+    subtitle: "A 60-minute dungeon crawl through Linux, Ansible, OpenShift, and Java",
     durationMinutes: 60,
+  },
+  story: {
+    premise: "The workshop cluster woke up unnamed.",
   },
   seats: [
     { id: "guardian", title: "Guardian", color: "#3d7a4a" },
@@ -89,6 +94,7 @@ const session: GameSession = {
 describe("App", () => {
   afterEach(() => {
     cleanup();
+    musicBed.resetForTests();
   });
 
   beforeEach(() => {
@@ -113,13 +119,22 @@ describe("App", () => {
     const { default: App } = await import("./App");
     render(<App />);
     expect(await screen.findByText("The Cluster That Forgot Its Name")).toBeInTheDocument();
+    expect(
+      screen.getByText("A 60-minute dungeon crawl through Linux, Ansible, OpenShift, and Java"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Quest lobby")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Game canvas")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
-    expect(startSession).toHaveBeenCalledWith([{ name: "Ada", seatId: "guardian" }]);
+    expect(startSession).toHaveBeenCalledWith(
+      [{ name: "Ada", seatId: "guardian" }],
+      "devops-dungeon",
+    );
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
     expect(screen.getByText("Party thorn-golem")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "start 60-minute run" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Game canvas")).toBeInTheDocument();
   });
 
   it("joins an existing party by share code", async () => {
@@ -139,7 +154,7 @@ describe("App", () => {
     expect(screen.getByText("party code thorn-golem")).toBeInTheDocument();
   });
 
-  it("starts a second party after leaving the current one", async () => {
+  it("starts a second party after returning to the lobby", async () => {
     startSession.mockResolvedValueOnce(session).mockResolvedValueOnce({
       ...session,
       id: "s2",
@@ -151,8 +166,10 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "new party" }));
-    expect(await screen.findByText("party code iron-ward")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "start 60-minute run" })).toBeInTheDocument();
     expect(leaveParty).toHaveBeenCalledWith("s1", "Ada");
+    fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code iron-ward")).toBeInTheDocument();
     expect(startSession).toHaveBeenCalledTimes(2);
   });
 
@@ -281,7 +298,10 @@ describe("App", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
-    expect(startSession).toHaveBeenCalledWith([{ name: "Forge", seatId: "automancer" }]);
+    expect(startSession).toHaveBeenCalledWith(
+      [{ name: "Forge", seatId: "automancer" }],
+      "devops-dungeon",
+    );
   });
 
   it("copies the live join code", async () => {
@@ -310,9 +330,6 @@ describe("App", () => {
       "Starting the hour — waiting on the Game Master…",
     );
     expect(screen.getByRole("button", { name: "starting…" })).toBeDisabled();
-    expect(
-      screen.getByText("# Starting the hour — waiting on the Game Master…"),
-    ).toBeInTheDocument();
     finish(session);
     expect(await screen.findByText(/inventory: rune-thorn/)).toBeInTheDocument();
     expect(screen.queryByText(/Starting the hour/)).not.toBeInTheDocument();
@@ -404,13 +421,16 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
     expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch party" }));
+    expect(await screen.findByRole("button", { name: "Join" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Join code"), {
       target: { value: "iron-ward" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Switch party" }));
+    await waitFor(() => expect(screen.getByLabelText("Alias")).toHaveValue("Briar"));
+    fireEvent.click(screen.getByRole("button", { name: "Join" }));
     expect(await screen.findByText("party code iron-ward")).toBeInTheDocument();
     expect(leaveParty).toHaveBeenCalledWith("s1", "Ada");
-    expect(addPartyMember).toHaveBeenCalledWith("s2", { name: "Ada", seatId: "guardian" });
+    expect(addPartyMember).toHaveBeenCalledWith("s2", { name: "Briar", seatId: "guardian" });
   });
 
   it("abandons the current party", async () => {
@@ -466,5 +486,63 @@ describe("App", () => {
       { timeout: 2500 },
     );
     expect(screen.getByRole("button", { name: "start 60-minute run" })).toBeInTheDocument();
+  });
+
+  it("shows an empty lobby when no campaigns load", async () => {
+    listCampaigns.mockResolvedValue([]);
+    const { default: App } = await import("./App");
+    render(<App />);
+    expect(await screen.findByText("No quests loaded.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "start 60-minute run" })).toBeDisabled();
+    expect(screen.queryByLabelText("Game canvas")).not.toBeInTheDocument();
+  });
+
+  it("shows a join error on the lobby", async () => {
+    getSession.mockRejectedValue(new Error("Unknown join code"));
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.change(await screen.findByLabelText("Join code"), {
+      target: { value: "nope-ward" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Join" }));
+    expect(await screen.findByText("Unknown join code")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quest lobby")).toBeInTheDocument();
+  });
+
+  it("refuses a duplicate alias with the engine error", async () => {
+    addPartyMember.mockRejectedValue(new Error("Alias already taken"));
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.change(await screen.findByLabelText("Join code"), {
+      target: { value: "thorn-golem" },
+    });
+    await waitFor(() => expect(screen.getByLabelText("Alias")).toHaveValue("Briar"));
+    fireEvent.change(screen.getByLabelText("Alias"), { target: { value: "Ada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Join" }));
+    expect(await screen.findByText("Alias already taken")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quest lobby")).toBeInTheDocument();
+  });
+
+  it("toggles the music mute control without leaving the lobby", async () => {
+    const { default: App } = await import("./App");
+    render(<App />);
+    const mute = await screen.findByRole("button", { name: "Mute music" });
+    fireEvent.click(mute);
+    expect(screen.getByRole("button", { name: "Unmute music" })).toBeInTheDocument();
+    expect(sessionStorage.getItem("questshift-muted")).toBe("1");
+    expect(screen.getByLabelText("Quest lobby")).toBeInTheDocument();
+  });
+
+  it("restores an active stored party into play, skipping the lobby", async () => {
+    sessionStorage.setItem(
+      "questshift-me",
+      JSON.stringify({ sessionId: "s1", name: "Ada", seatId: "guardian" }),
+    );
+    getSession.mockResolvedValue(session);
+    const { default: App } = await import("./App");
+    render(<App />);
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Quest lobby")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Game canvas")).toBeInTheDocument();
   });
 });

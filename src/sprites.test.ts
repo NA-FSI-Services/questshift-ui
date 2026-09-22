@@ -11,6 +11,9 @@ import {
   SEAT_SPRITE_KEYS,
   seatSpriteKey,
   SHEET_SPACING,
+  spriteSheetStyle,
+  SHEET_COLUMNS,
+  SHEET_ROWS,
   SPRITE_FRAMES,
   SPRITE_SCALE,
   SPRITESHEET_LOAD,
@@ -48,6 +51,8 @@ const UX_FRAMES: Record<string, number> = {
 
 describe("Kenney sprite keys", () => {
   it("loads the packed sheet at 16×16 with spacing 0", () => {
+    expect(TINY_DUNGEON_SHEET).toBe("tiny-dungeon");
+    expect(TINY_DUNGEON_PATH).toBe("/assets/kenney/tiny-dungeon/tilemap_packed.png");
     expect(SPRITESHEET_LOAD).toEqual({
       key: TINY_DUNGEON_SHEET,
       url: TINY_DUNGEON_PATH,
@@ -139,5 +144,15 @@ describe("Kenney sprite keys", () => {
         missed: false,
       }),
     ).toBe("gem_locked");
+  });
+
+  it("positions a packed frame as a CSS background", () => {
+    expect(SHEET_COLUMNS).toBe(12);
+    expect(SHEET_ROWS).toBe(11);
+    const style = spriteSheetStyle(96, 48);
+    expect(style.width).toBe(48);
+    expect(style.backgroundImage).toContain("tilemap_packed.png");
+    expect(style.backgroundPosition).toBe("-0px -384px");
+    expect(style.imageRendering).toBe("pixelated");
   });
 });

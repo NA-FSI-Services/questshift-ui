@@ -46,6 +46,7 @@ import {
 } from "../occupancy";
 import {
   completionsToCue,
+  duckMusic,
   ROOM_ENTER_DELAY_MS,
   SFX_EVENTS,
   SFX_LOAD,
@@ -652,6 +653,9 @@ export class DungeonScene extends Phaser.Scene {
     const spec = SFX_EVENTS[event];
     if (!this.cache.audio.exists(spec.key)) {
       return;
+    }
+    if (event === "quest_complete") {
+      duckMusic();
     }
     this.sound.play(spec.key, { volume: spec.volume });
   }

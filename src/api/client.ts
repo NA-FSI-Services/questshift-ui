@@ -80,7 +80,8 @@ export type CampaignRoom = {
 };
 
 export type Campaign = {
-  metadata: { id: string; title: string; durationMinutes: number };
+  metadata: { id: string; title: string; subtitle?: string; durationMinutes: number };
+  story?: { premise?: string };
   seats: { id: string; title: string; color: string }[];
   rooms: CampaignRoom[];
 };
@@ -118,11 +119,14 @@ export async function listCampaigns(): Promise<Campaign[]> {
   return res.json();
 }
 
-export async function startSession(party: PartyMember[]): Promise<GameSession> {
+export async function startSession(
+  party: PartyMember[],
+  campaignId = "devops-dungeon",
+): Promise<GameSession> {
   const res = await fetch("/api/sessions", {
     method: "POST",
     headers: jsonHeaders,
-    body: JSON.stringify({ campaignId: "devops-dungeon", party }),
+    body: JSON.stringify({ campaignId, party }),
   });
   if (!res.ok) {
     throw await engineError(res, "Could not start session");

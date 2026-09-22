@@ -12,7 +12,7 @@
   padding: 0.9rem 1.2rem;
   border-bottom: 1px solid #1e3326;
   position: relative;
-  z-index: 10;
+  z-index: 50;
 }
 
 .topbar h1 {
@@ -179,7 +179,110 @@
   width: 7.5rem;
 }
 
+.mute-toggle {
+  margin-left: auto;
+}
+
+.lobby {
+  display: grid;
+  gap: 1.4rem;
+  padding: 1.2rem 1.4rem 2rem;
+  max-width: 56rem;
+}
+
+.lobby h2 {
+  margin: 0 0 0.7rem;
+  font-size: 1rem;
+  color: var(--amber);
+}
+
+.lobby-empty {
+  color: var(--muted);
+}
+
+.quest-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.quest-card {
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  width: 100%;
+  background: #101714;
+  color: var(--ink);
+  border: 1px solid #2a4a38;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+
+.quest-card.selected {
+  border-color: var(--accent);
+  background: #163221;
+}
+
+.quest-card strong {
+  color: var(--accent);
+  font-family: UnifrakturMaguntia, serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.quest-subtitle,
+.quest-duration,
+.quest-premise,
+.lobby-join-quest {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.quest-premise {
+  white-space: pre-wrap;
+}
+
+.lobby .party-picker {
+  align-items: flex-end;
+}
+
+.lobby .seat-picker legend {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.seat-sprite {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.lobby-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: flex-end;
+}
+
+.lobby .import-yaml {
+  background: #163221;
+  color: var(--accent);
+  border: 1px solid #2f5a3c;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
 .topbar button,
+.lobby-actions button,
+.lobby .seat-pick,
 .terminal button {
   background: #163221;
   color: var(--accent);
@@ -189,6 +292,7 @@
 }
 
 .topbar button[aria-busy="true"],
+.lobby button[aria-busy="true"],
 .terminal button[aria-busy="true"] {
   cursor: wait;
 }
@@ -461,5 +565,13 @@ textarea {
   .canvas-panel {
     border-right: 0;
     border-bottom: 1px solid #1e3326;
+  }
+
+  .lobby,
+  .lobby-actions,
+  .lobby .party-picker {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
