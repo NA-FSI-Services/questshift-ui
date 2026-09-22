@@ -1,13 +1,16 @@
 import Phaser from "phaser";
 import {
+  atInteriorChallengeDoor,
   atInteriorDoor,
   challengeDoorLocked,
   clueInReach,
+  ENTER_RADIUS,
   INTERIOR_CHALLENGE_DOOR,
   INTERIOR_DOOR,
   INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
   nearestUnlockedRoom,
+  nextRoomThroughChallengeDoor,
   overworldSpawn,
   roomUnlocked,
   stepToward,
@@ -16,6 +19,7 @@ import {
   clueDialogBounds,
   clueDialogVisible,
   floorChests,
+  mayOpenClue,
   ROOM_TITLE,
   ROOM_TITLE_STYLE,
   roomTitleWell,
@@ -60,6 +64,7 @@ export type DungeonNode = {
   x: number;
   y: number;
   kind: string;
+  order?: number;
   guardianSprite?: string;
 };
 
@@ -192,6 +197,7 @@ export class DungeonScene extends Phaser.Scene {
       this.keyEnter = keys.Enter as Phaser.Input.Keyboard.Key;
       this.keyEsc = keys.Esc as Phaser.Input.Keyboard.Key;
     }
+    this.input.setTopOnly(false);
     this.input.on("pointerdown", () => this.unlockAudio());
     window.addEventListener("pointerdown", this.unlockAudio, { capture: true });
     window.addEventListener("keydown", this.unlockAudio, { capture: true });
@@ -444,29 +450,46 @@ export class DungeonScene extends Phaser.Scene {
   private drawInterior(state: BoardState) {
     this.interior.forEach((sprite) => sprite.destroy());
     this.interior = [];
-    if (!this.localViewed) {
-      return;
-    }
-    const node = this.nodes.find((item) => item.id === this.localViewed);
-    const title = this.add
-      .text(CANVAS_WIDTH / 2, ROOM_TITLE.y, node?.title ?? this.localViewed, ROOM_TITLE_STYLE)
-      .setOrigin(0.5, 0);
-    const well = roomTitleWell(title.width, title.height);
-    const plate = this.add.graphics().setDepth(7);
-    plate.fillStyle(ROOM_TITLE.fill, ROOM_TITLE.fillAlpha);
-    plate.fillRoundedRect(well.x, well.y, well.width, well.height, ROOM_TITLE.radius);
-    this.interior.push(plate, title.setDepth(8));
-    const lobby = this.hotspot("door", INTERIOR_DOOR.x, INTERIOR_DOOR.y).setDepth(4);
-    lobby.on("pointerdown", () => this.leaveRoom());
-    this.interior.push(lobby);
-    const locked = challengeDoorLocked(this.localViewed, state.completed);
-    const challengeKey = locked ? "door_locked" : "door";
-    this.interior.push(
-      this.place(challengeKey, INTERIOR_CHALLENGE_DOOR.x, INTERIOR_CHALLENGE_DOOR.y).setDepth(4),
-    );
-    if (locked) {
-      const sprite = guardianSpriteKey(this.localViewed, node?.guardianSprite);
-      this.interior.push(this.place(sprite, INTERIOR_GUARDIAN.x, INTERIOR_GUARDIAN.y).setDepth(5));
+    if (this.localViewed) {
+      const node = this.nodes.find((item) => item.id === this.localViewed);
+      const title = this.add
+        .text(CANVAS_WIDTH / 2, ROOM_TITLE.y, node?.title ?? this.localViewed, ROOM_TITLE_STYLE)
+        .setOrigin(0.5, 0);
+      const well = roomTitleWell(title.width, title.height);
+      const plate = this.add.graphics().setDepth(7);
+      plate.fillStyle(ROOM_TITLE.fill, ROOM_TITLE.fillAlpha);
+      plate.fillRoundedRect(well.x, well.y, well.width, well.height, ROOM_TITLE.radius);
+      this.interior.push(plate, title.setDepth(8));
+      const lobby = this.hotspot("door", INTERIOR_DOOR.x, INTERIOR_DOOR.y).setDepth(4);
+      lobby.on("pointerdown", () => this.leaveRoom());
+      this.interior.push(lobby);
+      const locked = challengeDoorLocked(this.localViewed, state.completed);
+      const challengeKey = locked ? "door_locked" : "door";
+      const challenge = this.place(
+        challengeKey,
+        INTERIOR_CHALLENGE_DOOR.x,
+        INTERIOR_CHALLENGE_DOOR.y,
+      ).setDepth(4);
+      if (!locked) {
+        challenge
+          .setInteractive(
+            new Phaser.Geom.Rectangle(
+              -ENTER_RADIUS,
+              -ENTER_RADIUS,
+              ENTER_RADIUS * 2,
+              ENTER_RADIUS * 2,
+            ),
+            Phaser.Geom.Rectangle.Contains,
+          )
+          .on("pointerdown", () => this.advanceThroughChallengeDoor());
+      }
+      this.interior.push(challenge);
+      if (locked) {
+        const sprite = guardianSpriteKey(this.localViewed, node?.guardianSprite);
+        this.interior.push(
+          this.place(sprite, INTERIOR_GUARDIAN.x, INTERIOR_GUARDIAN.y).setDepth(5),
+        );
+      }
     }
     floorChests(state.clues, this.localViewed).forEach((clue) => {
       const chest = this.hotspot("clue", clue.x, clue.y).setDepth(4);
@@ -477,19 +500,25 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private act() {
+    const layerChests = floorChests(this.board.clues, this.localViewed);
     if (this.localViewed) {
       if (atInteriorDoor(this.localX, this.localY)) {
         this.leaveRoom();
         return;
       }
-      const clue = clueInReach(
-        this.localX,
-        this.localY,
-        floorChests(this.board.clues, this.localViewed),
-      );
+      if (atInteriorChallengeDoor(this.localX, this.localY)) {
+        this.advanceThroughChallengeDoor();
+        return;
+      }
+      const clue = clueInReach(this.localX, this.localY, layerChests);
       if (clue) {
         this.pickClue(clue.id);
       }
+      return;
+    }
+    const clue = clueInReach(this.localX, this.localY, layerChests);
+    if (clue) {
+      this.pickClue(clue.id);
       return;
     }
     const node = nearestUnlockedRoom(
@@ -504,13 +533,26 @@ export class DungeonScene extends Phaser.Scene {
     }
   }
 
+  private advanceThroughChallengeDoor() {
+    const nextId = nextRoomThroughChallengeDoor(
+      this.localViewed,
+      this.nodes,
+      this.board.currentRoomId,
+      this.board.completed,
+    );
+    if (nextId) {
+      this.tryEnter(nextId);
+    }
+  }
+
   private tryEnter(roomId: string) {
-    if (!this.board.meName || this.localViewed) {
+    if (!this.board.meName || this.localViewed === roomId) {
       return;
     }
     if (!roomUnlocked(roomId, this.board.currentRoomId, this.board.completed)) {
       return;
     }
+    this.openClue = undefined;
     this.localViewed = roomId;
     this.localX = INTERIOR_SPAWN.x;
     this.localY = INTERIOR_SPAWN.y;
@@ -524,7 +566,7 @@ export class DungeonScene extends Phaser.Scene {
 
   private pickClue(clueId: string) {
     const clue = this.board.clues.find((item) => item.id === clueId);
-    if (!this.localViewed || !clue) {
+    if (!mayOpenClue(clue, this.localViewed)) {
       return;
     }
     this.openClue = { id: clue.id, label: clue.label, text: clue.text };

@@ -72,6 +72,7 @@ export type CampaignRoom = {
   title: string;
   mapX: number;
   mapY: number;
+  order?: number;
   puzzle_type: string;
   narrative?: string;
   prompt?: string;
@@ -81,7 +82,7 @@ export type CampaignRoom = {
 
 export type Campaign = {
   metadata: { id: string; title: string; subtitle?: string; durationMinutes: number };
-  story?: { premise?: string };
+  story?: { premise?: string; opening?: string; clues?: CampaignClue[] };
   seats: { id: string; title: string; color: string }[];
   rooms: CampaignRoom[];
 };

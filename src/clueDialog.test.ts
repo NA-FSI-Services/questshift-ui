@@ -5,6 +5,9 @@ import {
   clueDialogVisible,
   floorChests,
   foundCluesFor,
+  layerClues,
+  LOBBY_LAYER,
+  mayOpenClue,
   ROOM_TITLE,
   roomTitleWell,
 } from "./clueDialog";
@@ -25,11 +28,45 @@ describe("private chest dialogs", () => {
       { id: "shell-tree", roomId: "room-01-broken-shell" },
       { id: "shell-log", roomId: "room-01-broken-shell" },
       { id: "bind-hosts", roomId: "room-02-playbook-of-binding" },
+      { id: "lobby-hour", roomId: LOBBY_LAYER },
     ];
     expect(floorChests(clues, "room-01-broken-shell").map((clue) => clue.id)).toEqual([
       "shell-tree",
       "shell-log",
     ]);
+    expect(floorChests(clues, "").map((clue) => clue.id)).toEqual(["lobby-hour"]);
+    expect(floorChests(clues, "room-02-playbook-of-binding").map((clue) => clue.id)).toEqual([
+      "bind-hosts",
+    ]);
+  });
+
+  it("assigns lobby clues to the empty overworld layer", () => {
+    const clues = layerClues({
+      story: {
+        clues: [{ id: "lobby-hour", x: 80, y: 380, label: "hourglass", text: "Sixty minutes." }],
+      },
+      rooms: [
+        {
+          id: "room-01-broken-shell",
+          clues: [{ id: "shell-log", x: 280, y: 220, label: "log", text: "/var/log/quest.log" }],
+        },
+      ],
+    });
+    expect(clues.map((clue) => clue.id)).toEqual(["lobby-hour", "shell-log"]);
+    expect(clues[0]?.roomId).toBe(LOBBY_LAYER);
+    expect(clues[1]?.roomId).toBe("room-01-broken-shell");
+  });
+
+  it("refuses a chest whose layer is not the current view", () => {
+    const lobby = { id: "lobby-hour", roomId: LOBBY_LAYER };
+    const shell = { id: "shell-log", roomId: "room-01-broken-shell" };
+    const playbook = { id: "play-hosts", roomId: "room-02-playbook-of-binding" };
+    expect(mayOpenClue(lobby, "")).toBe(true);
+    expect(mayOpenClue(shell, "room-01-broken-shell")).toBe(true);
+    expect(mayOpenClue(shell, "")).toBe(false);
+    expect(mayOpenClue(lobby, "room-01-broken-shell")).toBe(false);
+    expect(mayOpenClue(playbook, "room-01-broken-shell")).toBe(false);
+    expect(mayOpenClue(undefined, "")).toBe(false);
   });
 
   it("places a readable dialog well on the canvas", () => {

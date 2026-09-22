@@ -267,4 +267,78 @@ describe("TerminalPanel", () => {
     expect(screen.queryByText(/scratched plaque/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\/var\/log\/quest\.log/)).not.toBeInTheDocument();
   });
+
+  it("shows lobby copy on the overworld and drops it inside a room", () => {
+    const { rerender } = render(
+      <TerminalPanel
+        session={session}
+        busy={false}
+        lobbyCopy="Torchlight on brushed metal. Sixty minutes."
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/# lobby/)).toBeInTheDocument();
+    expect(screen.getByText(/Torchlight on brushed metal/)).toBeInTheDocument();
+    expect(screen.queryByText(/inside The Broken Shell/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
+    rerender(
+      <TerminalPanel
+        session={session}
+        busy={false}
+        roomTitle="The Broken Shell"
+        roomNarrative="A shell golem blocks the gate."
+        lobbyCopy="Torchlight on brushed metal. Sixty minutes."
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/inside The Broken Shell/)).toBeInTheDocument();
+    expect(screen.getByText(/A shell golem blocks the gate/)).toBeInTheDocument();
+    expect(screen.queryByText(/# lobby/)).not.toBeInTheDocument();
+    rerender(
+      <TerminalPanel
+        session={session}
+        busy={false}
+        lobbyCopy="Torchlight on brushed metal. Sixty minutes."
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/# lobby/)).toBeInTheDocument();
+    expect(screen.queryByText(/inside The Broken Shell/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
+  });
+
+  it("does not keep another room's narrative after leaving for a later interior", () => {
+    const { rerender } = render(
+      <TerminalPanel
+        session={session}
+        busy={false}
+        roomTitle="The Broken Shell"
+        roomNarrative="A shell golem blocks the gate."
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/inside The Broken Shell/)).toBeInTheDocument();
+    rerender(
+      <TerminalPanel
+        session={{ ...session, currentRoomId: "room-02-playbook-of-binding" }}
+        busy={false}
+        roomTitle="The Playbook of Binding"
+        roomNarrative="A bound familiar bars the north challenge door."
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/inside The Playbook of Binding/)).toBeInTheDocument();
+    expect(screen.queryByText(/inside The Broken Shell/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
+  });
 });

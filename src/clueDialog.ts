@@ -1,4 +1,4 @@
-import { namesMatch } from "./occupancy";
+import { layerId, namesMatch } from "./occupancy";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./sprites";
 
 export const CLUE_DIALOG = {
@@ -33,13 +33,65 @@ export type ClueDialogCopy = {
   text: string;
 };
 
+export type LayerClue = {
+  id: string;
+  x: number;
+  y: number;
+  roomId: string;
+  label: string;
+  text: string;
+};
+
+export type CampaignClueSource = {
+  story?: {
+    clues?: Array<{ id: string; x: number; y: number; label: string; text: string }>;
+  };
+  rooms?: Array<{
+    id: string;
+    clues?: Array<{ id: string; x: number; y: number; label: string; text: string }>;
+  }>;
+};
+
+/** Empty `viewedRoomId` is the in-run overworld lobby. */
+export const LOBBY_LAYER = "";
+
 export function foundCluesFor(members: PartyClueHolder[], meName: string): string[] {
   const mine = members.find((member) => namesMatch(member.name, meName));
   return mine?.foundClues ?? [];
 }
 
-export function floorChests<T extends { roomId: string }>(clues: T[], roomId: string): T[] {
-  return clues.filter((clue) => clue.roomId === roomId);
+export function layerClues(campaign: CampaignClueSource | null | undefined): LayerClue[] {
+  const lobby = (campaign?.story?.clues ?? []).map((clue) => ({
+    id: clue.id,
+    x: clue.x,
+    y: clue.y,
+    roomId: LOBBY_LAYER,
+    label: clue.label,
+    text: clue.text,
+  }));
+  const rooms = (campaign?.rooms ?? []).flatMap((room) =>
+    (room.clues ?? []).map((clue) => ({
+      id: clue.id,
+      x: clue.x,
+      y: clue.y,
+      roomId: room.id,
+      label: clue.label,
+      text: clue.text,
+    })),
+  );
+  return [...lobby, ...rooms];
+}
+
+export function floorChests<T extends { roomId: string }>(clues: T[], viewedRoomId: string): T[] {
+  const layer = layerId(viewedRoomId);
+  return clues.filter((clue) => layerId(clue.roomId) === layer);
+}
+
+export function mayOpenClue<T extends { roomId: string }>(
+  clue: T | undefined,
+  viewedRoomId: string,
+): clue is T {
+  return Boolean(clue && layerId(clue.roomId) === layerId(viewedRoomId));
 }
 
 export function clueDialogBounds(): { x: number; y: number; width: number; height: number } {

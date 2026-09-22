@@ -13,6 +13,7 @@ const addPartyMember = vi.fn();
 const leaveParty = vi.fn();
 const deleteSession = vi.fn();
 const reportPresence = vi.fn();
+const openSessionSocket = vi.fn(() => () => undefined);
 const destroy = vi.fn();
 const emit = vi.fn();
 const on = vi.fn();
@@ -40,6 +41,10 @@ vi.mock("./game/DungeonScene", () => ({
   DungeonScene: class {},
 }));
 
+vi.mock("./sessionSocket", () => ({
+  openSessionSocket: (...args: unknown[]) => openSessionSocket(...args),
+}));
+
 const campaign: Campaign = {
   metadata: {
     id: "devops-dungeon",
@@ -49,6 +54,7 @@ const campaign: Campaign = {
   },
   story: {
     premise: "The workshop cluster woke up unnamed.",
+    opening: "Torchlight on brushed metal.",
   },
   seats: [
     { id: "guardian", title: "Guardian", color: "#3d7a4a" },
@@ -60,6 +66,7 @@ const campaign: Campaign = {
       title: "The Broken Shell",
       mapX: 120,
       mapY: 220,
+      order: 1,
       puzzle_type: "linux",
       narrative: "A shell golem blocks the gate.",
       clues: [
@@ -135,6 +142,38 @@ describe("App", () => {
     expect(screen.getByText("Party thorn-golem")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "start 60-minute run" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Game canvas")).toBeInTheDocument();
+    expect(screen.getByText(/open north door to the next challenge/)).toBeInTheDocument();
+    expect(openSessionSocket).toHaveBeenCalledWith("s1", expect.any(Function));
+  });
+
+  it("shows a teammate command from the live party snapshot", async () => {
+    startSession.mockResolvedValue(session);
+    let push: ((live: GameSession) => void) | undefined;
+    openSessionSocket.mockImplementation((_id: string, onSnapshot: (live: GameSession) => void) => {
+      push = onSnapshot;
+      return () => undefined;
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText("party code thorn-golem")).toBeInTheDocument();
+    push?.({
+      ...session,
+      lastNarrative: "The golem rumbles at Linus.",
+      commandLog: [
+        {
+          roomId: "room-01-broken-shell",
+          name: "Linus",
+          seatId: "automancer",
+          command: "cat /var/log/quest.log",
+          passed: false,
+        },
+      ],
+    });
+    expect(await screen.findByText(/Linus · automancer/)).toBeInTheDocument();
+    expect(screen.getByText(/cat \/var\/log\/quest\.log/)).toBeInTheDocument();
+    expect(screen.getByText(/failed/)).toBeInTheDocument();
+    expect(screen.getByText(/The golem rumbles at Linus/)).toBeInTheDocument();
   });
 
   it("joins an existing party by share code", async () => {
@@ -400,6 +439,35 @@ describe("App", () => {
         viewedRoomId: "",
       }),
     );
+  });
+
+  it("shows lobby copy on Panel B until this browser enters a room", async () => {
+    startSession.mockResolvedValue({
+      ...session,
+      partyMembers: [{ name: "Ada", seatId: "guardian", mapX: 120, mapY: 276, viewedRoomId: "" }],
+    });
+    reportPresence.mockResolvedValue(session);
+    let presence:
+      ((payload: { mapX: number; mapY: number; viewedRoomId: string }) => void) | undefined;
+    on.mockImplementation((event: string, handler: unknown) => {
+      if (event === "presence") {
+        presence = handler as typeof presence;
+      }
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "start 60-minute run" }));
+    expect(await screen.findByText(/# lobby/)).toBeInTheDocument();
+    expect(screen.getByText(/Torchlight on brushed metal/)).toBeInTheDocument();
+    expect(screen.queryByText(/inside The Broken Shell/)).not.toBeInTheDocument();
+    presence?.({ mapX: 450, mapY: 360, viewedRoomId: "room-01-broken-shell" });
+    expect(await screen.findByText(/inside The Broken Shell/)).toBeInTheDocument();
+    expect(screen.getByText(/A shell golem blocks the gate/)).toBeInTheDocument();
+    expect(screen.queryByText(/# lobby/)).not.toBeInTheDocument();
+    presence?.({ mapX: 120, mapY: 276, viewedRoomId: "" });
+    expect(await screen.findByText(/# lobby/)).toBeInTheDocument();
+    expect(screen.queryByText(/inside The Broken Shell/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
   });
 
   it("switches from a stored party to another join code", async () => {

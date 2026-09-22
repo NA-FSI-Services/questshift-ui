@@ -10,6 +10,8 @@ import {
   INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
   nearestUnlockedRoom,
+  nextChallengeRoom,
+  nextRoomThroughChallengeDoor,
   overworldSpawn,
   roomUnlocked,
   STEP,
@@ -17,8 +19,8 @@ import {
 } from "./map";
 
 const nodes = [
-  { id: "room-01-broken-shell", x: 120, y: 220 },
-  { id: "room-02-playbook-of-binding", x: 280, y: 140 },
+  { id: "room-01-broken-shell", x: 120, y: 220, order: 1 },
+  { id: "room-02-playbook-of-binding", x: 280, y: 140, order: 2 },
 ];
 
 describe("walkable map contract", () => {
@@ -79,5 +81,31 @@ describe("walkable map contract", () => {
       false,
     );
     expect(challengeDoorLocked("", {})).toBe(false);
+  });
+
+  it("walks YAML order through the open north door after a pass", () => {
+    const throne = { id: "room-05-operators-throne", x: 760, y: 180, order: 5 };
+    expect(nextChallengeRoom("room-01-broken-shell", nodes)?.id).toBe(
+      "room-02-playbook-of-binding",
+    );
+    expect(nextChallengeRoom("room-02-playbook-of-binding", nodes)).toBeUndefined();
+    expect(nextChallengeRoom("room-05-operators-throne", [...nodes, throne])).toBeUndefined();
+    expect(nextChallengeRoom("missing", nodes)).toBeUndefined();
+    expect(
+      nextRoomThroughChallengeDoor("room-01-broken-shell", nodes, "room-01-broken-shell", {}),
+    ).toBeUndefined();
+    expect(
+      nextRoomThroughChallengeDoor("room-01-broken-shell", nodes, "room-02-playbook-of-binding", {
+        "room-01-broken-shell": true,
+      }),
+    ).toBe("room-02-playbook-of-binding");
+    expect(
+      nextRoomThroughChallengeDoor(
+        "room-05-operators-throne",
+        [...nodes, throne],
+        "room-05-operators-throne",
+        { "room-05-operators-throne": true },
+      ),
+    ).toBeUndefined();
   });
 });

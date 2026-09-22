@@ -16,7 +16,7 @@ Read essentials, then UX sprite keys:
 
 Phaser 3 + React + TypeScript. Vite proxies `/api` and `/ws` to `localhost:8080`.
 
-- Panel A: pixel dungeon (`src/game/DungeonScene.ts`). Each interior has a south lobby `door` (always open) and a north `door_locked` plus YAML `guardian` until that room is solved. Panel B: IBM Plex Mono terminal (`src/terminal/TerminalPanel.tsx`). Pre-run **quest lobby** (`src/lobby/Lobby.tsx`) until this browser is in a party.
+- Panel A: pixel dungeon (`src/game/DungeonScene.ts`). Each interior has a south lobby `door` (always open) and a north `door_locked` plus YAML `guardian` until that room is solved; the open north `door` then enters the next YAML room. Panel B: IBM Plex Mono terminal (`src/terminal/TerminalPanel.tsx`). Pre-run **quest lobby** (`src/lobby/Lobby.tsx`) until this browser is in a party.
 - Kenney Tiny Dungeon CC0 for sprites; Kenney RPG Audio + Music Jingles CC0 for map SFX (`public/assets/kenney/sfx/`); Kenney Music Loops CC0 for `bgm_lobby` / `bgm_dungeon` (`public/assets/kenney/music/`). Named keys in UX.md. No AI images. No TTS.
 - Seats are cosmetic. Do not gate commands by seat.
 - No TTS, mic, or Web Speech.

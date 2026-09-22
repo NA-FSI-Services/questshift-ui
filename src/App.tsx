@@ -18,7 +18,8 @@ import { createDungeonGame, DungeonScene, type PresencePayload } from "./game/Du
 import { Lobby } from "./lobby/Lobby";
 import { isSeatId, suggestAlias } from "./party";
 import { bindPresence } from "./presenceBind";
-import { foundCluesFor } from "./clueDialog";
+import { foundCluesFor, layerClues } from "./clueDialog";
+import { openSessionSocket } from "./sessionSocket";
 import { musicBed } from "./sounds";
 import { TerminalPanel } from "./terminal/TerminalPanel";
 import "./App.css";
@@ -133,6 +134,7 @@ export default function App() {
         x: room.mapX,
         y: room.mapY,
         kind: room.puzzle_type,
+        order: room.order,
         guardianSprite: room.guardian?.sprite,
       })),
     [campaign],
@@ -250,18 +252,16 @@ export default function App() {
       inventory: session.inventory,
       missed,
       foundClues: foundCluesFor(session.partyMembers, me?.name ?? ""),
-      clues: (campaign?.rooms ?? []).flatMap((room) =>
-        (room.clues ?? []).map((clue) => ({
-          id: clue.id,
-          x: clue.x,
-          y: clue.y,
-          roomId: room.id,
-          label: clue.label,
-          text: clue.text,
-        })),
-      ),
+      clues: layerClues(campaign),
     });
   }, [session, campaign, missed, me, pose]);
+
+  useEffect(() => {
+    if (!session?.id) {
+      return;
+    }
+    return openSessionSocket(session.id, setSession);
+  }, [session?.id]);
 
   useEffect(() => {
     if (!session?.id) {
@@ -535,6 +535,9 @@ export default function App() {
   );
   const viewedRoomId = pose?.viewedRoomId || liveMe?.viewedRoomId || "";
   const viewedRoom = campaign?.rooms.find((room) => room.id === viewedRoomId);
+  const lobbyCopy = viewedRoom
+    ? undefined
+    : (campaign?.story?.opening ?? campaign?.story?.premise ?? "").trim() || undefined;
 
   return (
     <div className="shell">
@@ -640,8 +643,9 @@ export default function App() {
               onPointerDown={(event) => event.currentTarget.querySelector("canvas")?.focus()}
             />
             <p className="map-help">
-              Click the map, then WASD or arrows to walk. E or Enter enters a room or opens a chest.
-              Chest text is only on your map. Esc leaves the room.
+              Click the map, then WASD or arrows to walk. E or Enter enters a room, opens a chest,
+              or takes an open north door to the next challenge. Chest text is only on your map. Esc
+              leaves to the lobby.
             </p>
             <ul className="seats">
               {(session?.partyMembers?.length ? session.partyMembers : []).map((member) => {
@@ -668,6 +672,7 @@ export default function App() {
             waitMessage={waitMessage}
             roomTitle={viewedRoom?.title}
             roomNarrative={viewedRoom?.narrative}
+            lobbyCopy={lobbyCopy}
             onCommand={onCommand}
             onExport={onExport}
             onImport={onImport}

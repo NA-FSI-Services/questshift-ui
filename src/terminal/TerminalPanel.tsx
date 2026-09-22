@@ -10,6 +10,7 @@ type Props = {
   waitMessage?: string | null;
   roomTitle?: string;
   roomNarrative?: string;
+  lobbyCopy?: string;
   onCommand: (command: string) => Promise<void>;
   onExport: () => Promise<void>;
   onImport: (body: string) => Promise<void>;
@@ -21,6 +22,7 @@ export function TerminalPanel({
   waitMessage,
   roomTitle,
   roomNarrative,
+  lobbyCopy,
   onCommand,
   onExport,
   onImport,
@@ -103,6 +105,11 @@ export function TerminalPanel({
           <pre className="sys">
             # inside {roomTitle}
             {roomNarrative ? `\n${roomNarrative.trim()}` : ""}
+          </pre>
+        ) : lobbyCopy ? (
+          <pre className="sys">
+            # lobby
+            {`\n${lobbyCopy.trim()}`}
           </pre>
         ) : null}
         {waitMessage ? <pre className="sys"># {waitMessage}</pre> : null}

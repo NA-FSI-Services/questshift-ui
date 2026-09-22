@@ -16,7 +16,7 @@ export const INTERIOR_SPAWN = { x: 450, y: 360 };
 
 export const SPAWN_SOUTH = 56;
 
-export type MapNode = { id: string; x: number; y: number };
+export type MapNode = { id: string; x: number; y: number; order?: number };
 
 export function overworldSpawn(node: MapNode): { x: number; y: number } {
   return clampPosition(node.x, node.y + SPAWN_SOUTH);
@@ -76,4 +76,41 @@ export function atInteriorChallengeDoor(x: number, y: number): boolean {
 
 export function challengeDoorLocked(roomId: string, completed: Record<string, boolean>): boolean {
   return Boolean(roomId) && !completed[roomId];
+}
+
+function roomOrder(nodes: { id: string; order?: number }[], index: number): number {
+  return nodes[index].order ?? index + 1;
+}
+
+/** Next YAML room (`order + 1`). Last room and unknown ids have no successor. */
+export function nextChallengeRoom<T extends { id: string; order?: number }>(
+  fromId: string,
+  nodes: T[],
+): T | undefined {
+  const fromIndex = nodes.findIndex((node) => node.id === fromId);
+  if (fromIndex < 0) {
+    return undefined;
+  }
+  const nextOrder = roomOrder(nodes, fromIndex) + 1;
+  return nodes.find((_, index) => roomOrder(nodes, index) === nextOrder);
+}
+
+/**
+ * After this room is solved, the north door leads to the next unlocked challenge.
+ * Locked doors, the throne (no successor), and still-sealed next rooms return undefined.
+ */
+export function nextRoomThroughChallengeDoor(
+  fromId: string,
+  nodes: { id: string; order?: number }[],
+  currentRoomId: string,
+  completed: Record<string, boolean>,
+): string | undefined {
+  if (challengeDoorLocked(fromId, completed)) {
+    return undefined;
+  }
+  const next = nextChallengeRoom(fromId, nodes);
+  if (!next || !roomUnlocked(next.id, currentRoomId, completed)) {
+    return undefined;
+  }
+  return next.id;
 }
