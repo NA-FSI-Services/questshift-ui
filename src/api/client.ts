@@ -22,6 +22,15 @@ export type CommandLogEntry = {
   command: string;
   passed: boolean;
   message?: string;
+  /** Game Master prose answering this attempt. `name` is the addressee. */
+  narrative?: string;
+};
+
+export type GmLogEntry = {
+  roomId: string;
+  narrative?: string;
+  /** Scene beats omit this. A name would mean the line is not room-addressed. */
+  name?: string | null;
 };
 
 export type StageClear = {
@@ -55,6 +64,7 @@ export type GameSession = {
   lastCanvasEvent?: string;
   yamlFallback?: boolean;
   commandLog?: CommandLogEntry[];
+  gmLog?: GmLogEntry[];
   foundClues?: string[];
   adventureSummary?: AdventureSummary;
 };

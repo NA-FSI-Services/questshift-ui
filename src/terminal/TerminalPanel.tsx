@@ -1,8 +1,39 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import type { GameSession } from "../api/client";
+import type { CommandLogEntry, GameSession, GmLogEntry } from "../api/client";
 import { gmProse } from "./gmProse";
 
-type LogLine = { kind: "gm" | "you" | "sys"; text: string };
+type LogLine = { kind: "you" | "sys"; text: string };
+
+function roomScenes(session: GameSession | null): GmLogEntry[] {
+  if (!session) {
+    return [];
+  }
+  return (session.gmLog ?? []).filter(
+    (beat) => beat.roomId === session.currentRoomId && !beat.name && gmProse(beat.narrative),
+  );
+}
+
+function roomAttempts(session: GameSession | null): CommandLogEntry[] {
+  if (!session) {
+    return [];
+  }
+  return (session.commandLog ?? []).filter((row) => row.roomId === session.currentRoomId);
+}
+
+function hasPersistedGm(session: GameSession | null): boolean {
+  return (
+    roomScenes(session).length > 0 || roomAttempts(session).some((row) => gmProse(row.narrative))
+  );
+}
+
+function attemptAddressee(name?: string, seatId?: string): string {
+  const alias = name?.trim() ?? "";
+  if (!alias) {
+    return "";
+  }
+  const seat = seatId?.trim();
+  return seat ? `${alias} · ${seat}` : alias;
+}
 
 type Props = {
   session: GameSession | null;
@@ -36,22 +67,8 @@ export function TerminalPanel({
   }, [session?.id]);
 
   useEffect(() => {
-    const prose = gmProse(session?.lastNarrative);
-    if (!prose) {
-      return;
-    }
-    setLog((prev) => {
-      const last = prev[prev.length - 1];
-      if (last?.text === prose) {
-        return prev;
-      }
-      return [...prev, { kind: "gm", text: prose }];
-    });
-  }, [session?.lastNarrative, session?.id]);
-
-  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [log]);
+  }, [log, session?.commandLog, session?.gmLog, session?.lastNarrative, session?.currentRoomId]);
 
   const hourOver = session?.status === "complete" || session?.status === "expired";
   const clock = session
@@ -97,10 +114,18 @@ export function TerminalPanel({
       <div className="log" aria-live="polite">
         {log.map((line, index) => (
           <pre key={`${line.kind}-${index}`} className={line.kind}>
-            {line.kind === "gm" ? "GM> " : line.kind === "you" ? "$ " : "# "}
+            {line.kind === "you" ? "$ " : "# "}
             {line.text}
           </pre>
         ))}
+        {roomScenes(session).map((beat, index) => (
+          <pre key={`scene-${beat.roomId}-${index}`} className="gm">
+            GM&gt; {gmProse(beat.narrative)}
+          </pre>
+        ))}
+        {!hasPersistedGm(session) && gmProse(session?.lastNarrative) ? (
+          <pre className="gm">GM&gt; {gmProse(session?.lastNarrative)}</pre>
+        ) : null}
         {roomTitle ? (
           <pre className="sys">
             # inside {roomTitle}
@@ -113,20 +138,22 @@ export function TerminalPanel({
           </pre>
         ) : null}
         {waitMessage ? <pre className="sys"># {waitMessage}</pre> : null}
-        {(session?.commandLog ?? [])
-          .filter((row) => row.roomId === session?.currentRoomId)
-          .map((row, index) => (
-            <pre
-              key={`${row.name}-${row.command}-${index}`}
-              className={row.passed ? "board pass" : "board fail"}
-            >
+        {roomAttempts(session).map((row, index) => (
+          <div key={`${row.name}-${row.command}-${index}`}>
+            <pre className={row.passed ? "board pass" : "board fail"}>
               $ {row.name} · {row.seatId}
               {"\n"}
               {row.command}
               {"\n"}
               {row.passed ? "accepted" : "failed"}
             </pre>
-          ))}
+            {gmProse(row.narrative) ? (
+              <pre className="gm">
+                {`GM> ${attemptAddressee(row.name, row.seatId)}\n${gmProse(row.narrative)}`}
+              </pre>
+            ) : null}
+          </div>
+        ))}
         {session?.status === "complete" && session.adventureSummary?.prose ? (
           <pre className="sys recap" role="status">
             {session.adventureSummary.prose}

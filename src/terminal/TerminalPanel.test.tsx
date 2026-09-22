@@ -313,6 +313,149 @@ describe("TerminalPanel", () => {
     expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
   });
 
+  it("attributes each Game Master reply and restores them from the session", () => {
+    const live: GameSession = {
+      ...session,
+      lastNarrative: "Linus, the log remembers.",
+      gmLog: [
+        { roomId: "room-01-broken-shell", narrative: "Torchlight on the gate." },
+        {
+          roomId: "room-01-broken-shell",
+          name: "Ada",
+          narrative: "Pretend Start was Ada.",
+        },
+      ],
+      commandLog: [
+        {
+          roomId: "room-01-broken-shell",
+          name: "Ada",
+          seatId: "guardian",
+          command: "Hello",
+          passed: false,
+          narrative: "Ada, I need a command.",
+        },
+        {
+          roomId: "room-01-broken-shell",
+          name: "Linus",
+          seatId: "automancer",
+          command: "hint",
+          passed: false,
+          narrative: "Linus, the log remembers.",
+        },
+        {
+          roomId: "room-02-playbook-of-binding",
+          name: "Moss",
+          seatId: "ranger",
+          command: "hosts: dungeon",
+          passed: true,
+          narrative: "Moss, the familiar yields.",
+        },
+      ],
+    };
+    const { unmount } = render(
+      <TerminalPanel
+        session={live}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Torchlight on the gate/)).toHaveTextContent(
+      /^GM> Torchlight on the gate/,
+    );
+    expect(screen.getByText(/Ada, I need a command/)).toHaveTextContent(/GM> Ada · guardian/);
+    expect(screen.getByText(/Linus, the log remembers/)).toHaveTextContent(
+      /GM> Linus · automancer/,
+    );
+    expect(screen.getAllByText(/Linus, the log remembers/)).toHaveLength(1);
+    expect(screen.queryByText(/Moss, the familiar yields/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pretend Start was Ada/)).not.toBeInTheDocument();
+    unmount();
+    render(
+      <TerminalPanel
+        session={live}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Ada, I need a command/)).toBeInTheDocument();
+    expect(screen.getByText(/Linus, the log remembers/)).toBeInTheDocument();
+    expect(screen.getByText(/Torchlight on the gate/)).toBeInTheDocument();
+  });
+
+  it("does not label a room opening with the player who passed the previous room", () => {
+    render(
+      <TerminalPanel
+        session={{
+          ...session,
+          currentRoomId: "room-02-playbook-of-binding",
+          lastNarrative: "A bound familiar bars the door.",
+          gmLog: [
+            {
+              roomId: "room-02-playbook-of-binding",
+              narrative: "A bound familiar bars the door.",
+            },
+          ],
+          commandLog: [
+            {
+              roomId: "room-01-broken-shell",
+              name: "Ada",
+              seatId: "guardian",
+              command: "grep -i rune /var/log/quest.log | awk '{print $NF}'",
+              passed: true,
+              narrative: "The golem cracks.",
+            },
+          ],
+        }}
+        busy={false}
+        lobbyCopy="Torchlight on brushed metal. Sixty minutes."
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/A bound familiar bars the door/)).toHaveTextContent(
+      /^GM> A bound familiar bars the door/,
+    );
+    expect(screen.queryByText(/GM> Ada/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/The golem cracks/)).not.toBeInTheDocument();
+    expect(screen.getByText(/# lobby/)).toBeInTheDocument();
+  });
+
+  it("shows attempt prose from narrative and hides puzzle JSON", () => {
+    render(
+      <TerminalPanel
+        session={{
+          ...session,
+          commandLog: [
+            {
+              roomId: "room-01-broken-shell",
+              name: "Ada",
+              seatId: "guardian",
+              command: "Hello",
+              passed: false,
+              narrative: `{
+  "narrative": "Stay your tongue.",
+  "expected_command_pattern": "(?s).*awk.*",
+  "puzzle_type": "linux"
+}`,
+            },
+          ],
+        }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Stay your tongue/)).toBeInTheDocument();
+    expect(screen.queryByText(/expected_command_pattern/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/puzzle_type/)).not.toBeInTheDocument();
+  });
+
   it("does not keep another room's narrative after leaving for a later interior", () => {
     const { rerender } = render(
       <TerminalPanel
