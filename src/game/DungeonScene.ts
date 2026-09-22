@@ -7,7 +7,6 @@ import {
   INTERIOR_DOOR,
   INTERIOR_GUARDIAN,
   INTERIOR_SPAWN,
-  lobbyPathCells,
   nearestUnlockedRoom,
   overworldSpawn,
   roomUnlocked,
@@ -31,7 +30,6 @@ import {
   lobbyDoorKey,
   LOOT_ORDER,
   lootSpriteKey,
-  pathSpriteKey,
   seatSpriteKey,
   SPRITE_SCALE,
   SPRITESHEET_LOAD,
@@ -108,7 +106,6 @@ export class DungeonScene extends Phaser.Scene {
   private nodes: DungeonNode[] = [];
   private rooms = new Map<string, Phaser.GameObjects.Image>();
   private gems = new Map<string, Phaser.GameObjects.Image>();
-  private pathTiles: Phaser.GameObjects.Image[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
   private party: Phaser.GameObjects.GameObject[] = [];
   private loot: Phaser.GameObjects.Image[] = [];
@@ -161,7 +158,6 @@ export class DungeonScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#101714");
     this.drawTiles();
-    this.drawPath();
     this.nodes.forEach((node) => {
       const room = this.hotspot("lobby_gate", node.x, node.y).setDepth(2);
       room.on("pointerdown", () => this.tryEnter(node.id));
@@ -294,15 +290,7 @@ export class DungeonScene extends Phaser.Scene {
       room.setVisible(!interior);
       gem.setVisible(!interior);
       const current = Boolean(state.currentRoomId) && state.currentRoomId === node.id;
-      room.setFrame(
-        frameFor(
-          lobbyDoorKey({
-            roomId: node.id,
-            currentRoomId: state.currentRoomId,
-            completed: state.completed,
-          }),
-        ),
-      );
+      room.setFrame(frameFor(lobbyDoorKey()));
       gem.setFrame(
         frameFor(
           gemKeyFor({
@@ -325,7 +313,6 @@ export class DungeonScene extends Phaser.Scene {
         });
       }
     });
-    this.pathTiles.forEach((tile) => tile.setVisible(!interior));
     this.labels.forEach((label) => label.setVisible(!interior));
     const current = this.nodes.find((node) => node.id === state.currentRoomId);
     if (this.focus) {
@@ -687,28 +674,6 @@ export class DungeonScene extends Phaser.Scene {
           .setDepth(0);
       }
     }
-  }
-
-  private drawPath() {
-    const cols = Math.ceil(CANVAS_WIDTH / TILE_DISPLAY);
-    const rows = Math.ceil(CANVAS_HEIGHT / TILE_DISPLAY);
-    lobbyPathCells(this.nodes).forEach((cell, index) => {
-      if (cell.col <= 0 || cell.row <= 0 || cell.col >= cols - 1 || cell.row >= rows - 1) {
-        return;
-      }
-      this.pathTiles.push(
-        this.add
-          .image(
-            cell.col * TILE_DISPLAY,
-            cell.row * TILE_DISPLAY,
-            TINY_DUNGEON_SHEET,
-            frameFor(pathSpriteKey(index)),
-          )
-          .setOrigin(0)
-          .setScale(SPRITE_SCALE)
-          .setDepth(0.5),
-      );
-    });
   }
 
   private place(key: SpriteKey, x: number, y: number) {

@@ -8,7 +8,6 @@ import {
   lootSpriteKey,
   LOOT_ORDER,
   LOOT_SPRITE_KEYS,
-  pathSpriteKey,
   SEAT_SPRITE_KEYS,
   seatSpriteKey,
   SHEET_SPACING,
@@ -22,8 +21,6 @@ import {
 
 const UX_FRAMES: Record<string, number> = {
   floor: 48,
-  path: 24,
-  path_rocks: 12,
   wall: 28,
   focus: 60,
   seat_automancer: 84,
@@ -42,7 +39,6 @@ const UX_FRAMES: Record<string, number> = {
   door: 45,
   door_locked: 21,
   lobby_gate: 9,
-  lobby_gate_open: 10,
   guardian_shell: 97,
   guardian_playbook: 98,
   guardian_pod: 100,
@@ -76,39 +72,11 @@ describe("Kenney sprite keys", () => {
     expect(seatSpriteKey("missing")).toBeUndefined();
   });
 
-  it("keeps resolved lobby gates closed on tile 9", () => {
-    expect(
-      lobbyDoorKey({
-        roomId: "room-01-broken-shell",
-        currentRoomId: "room-01-broken-shell",
-        completed: {},
-      }),
-    ).toBe("lobby_gate_open");
-    expect(
-      lobbyDoorKey({
-        roomId: "room-02-playbook-of-binding",
-        currentRoomId: "room-01-broken-shell",
-        completed: {},
-      }),
-    ).toBe("lobby_gate");
-    expect(
-      lobbyDoorKey({
-        roomId: "room-01-broken-shell",
-        currentRoomId: "room-02-playbook-of-binding",
-        completed: { "room-01-broken-shell": true },
-      }),
-    ).toBe("lobby_gate");
+  it("uses the same closed lobby gate for current, locked, and resolved rooms", () => {
+    expect(lobbyDoorKey()).toBe("lobby_gate");
     expect(frameFor("lobby_gate")).toBe(9);
-    expect(frameFor("lobby_gate_open")).toBe(10);
     expect(frameFor("door_locked")).toBe(21);
     expect(frameFor("door")).toBe(45);
-  });
-
-  it("alternates hard floor and rocky floor along the lobby snake", () => {
-    expect(pathSpriteKey(0)).toBe("path");
-    expect(pathSpriteKey(1)).toBe("path_rocks");
-    expect(frameFor("path")).toBe(24);
-    expect(frameFor("path_rocks")).toBe(12);
   });
 
   it("maps each challenge room to a distinct Kenney guardian", () => {

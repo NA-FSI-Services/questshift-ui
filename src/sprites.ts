@@ -28,8 +28,6 @@ export const SPRITESHEET_LOAD = {
 
 export const SPRITE_FRAMES = {
   floor: 48,
-  path: 24,
-  path_rocks: 12,
   wall: 28,
   focus: 60,
   seat_automancer: 84,
@@ -48,7 +46,6 @@ export const SPRITE_FRAMES = {
   door: 45,
   door_locked: 21,
   lobby_gate: 9,
-  lobby_gate_open: 10,
   guardian_shell: 97,
   guardian_playbook: 98,
   guardian_pod: 100,
@@ -86,10 +83,6 @@ export function frameFor(key: SpriteKey): number {
   return SPRITE_FRAMES[key];
 }
 
-export function pathSpriteKey(index: number): SpriteKey {
-  return index % 2 === 0 ? "path" : "path_rocks";
-}
-
 export function guardianSpriteKey(roomId: string, authored?: string): SpriteKey {
   if (authored && authored in SPRITE_FRAMES) {
     return authored as SpriteKey;
@@ -105,17 +98,8 @@ export function lootSpriteKey(itemId: string): SpriteKey | undefined {
   return LOOT_SPRITE_KEYS[itemId];
 }
 
-export function lobbyDoorKey(opts: {
-  roomId: string;
-  currentRoomId: string;
-  completed: Record<string, boolean>;
-}): SpriteKey {
-  if (opts.completed[opts.roomId]) {
-    return "lobby_gate";
-  }
-  if (opts.roomId === opts.currentRoomId) {
-    return "lobby_gate_open";
-  }
+/** Every overworld gate uses the closed wooden door, including the current scoring room. */
+export function lobbyDoorKey(): SpriteKey {
   return "lobby_gate";
 }
 
