@@ -147,6 +147,38 @@ describe("App", () => {
     expect(openSessionSocket).toHaveBeenCalledWith("s1", expect.any(Function));
   });
 
+  it("lists both quest cards and starts ansible-bastion when selected", async () => {
+    const ansible: Campaign = {
+      metadata: {
+        id: "ansible-bastion",
+        title: "The Bastion That Lost Its Runbook",
+        subtitle: "A 60-minute Ansible crawl",
+        durationMinutes: 60,
+      },
+      story: { premise: "Controller Aether woke empty." },
+      seats: campaign.seats,
+      rooms: [],
+    };
+    listCampaigns.mockResolvedValue([campaign, ansible]);
+    startSession.mockResolvedValue({
+      ...session,
+      campaignId: "ansible-bastion",
+      currentRoomId: "room-01-couriers-vault",
+      inventory: [],
+    });
+    const { default: App } = await import("./App");
+    render(<App />);
+    expect(await screen.findByText("The Bastion That Lost Its Runbook")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /The Bastion That Lost Its Runbook/ }));
+    fireEvent.click(screen.getByRole("button", { name: "start 60-minute run" }));
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        [{ name: "Ada", seatId: "guardian" }],
+        "ansible-bastion",
+      ),
+    );
+  });
+
   it("shows a teammate command from the live party snapshot", async () => {
     startSession.mockResolvedValue(session);
     let push: ((live: GameSession) => void) | undefined;
