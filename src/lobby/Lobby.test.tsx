@@ -17,6 +17,20 @@ const campaign: Campaign = {
   rooms: [],
 };
 
+const ansibleCampaign: Campaign = {
+  metadata: {
+    id: "ansible-bastion",
+    title: "The Bastion That Lost Its Runbook",
+    subtitle: "A 60-minute Ansible crawl",
+    durationMinutes: 60,
+  },
+  story: {
+    premise: "Automation Controller Aether woke with an empty inventory.",
+  },
+  seats: [{ id: "automancer", title: "Automancer", color: "#c45c26" }],
+  rooms: [],
+};
+
 describe("Lobby", () => {
   afterEach(() => {
     cleanup();
@@ -50,6 +64,33 @@ describe("Lobby", () => {
       "true",
     );
     expect(screen.getByRole("button", { name: "start 60-minute run" })).toBeEnabled();
+  });
+
+  it("renders two campaign cards and selects ansible-bastion", () => {
+    const onSelect = vi.fn();
+    render(
+      <Lobby
+        campaigns={[campaign, ansibleCampaign]}
+        selectedCampaignId="devops-dungeon"
+        joinLocksQuest={false}
+        seatId="guardian"
+        alias="Ada"
+        joinDraft=""
+        busy={false}
+        pending={null}
+        onSelectCampaign={onSelect}
+        onSeat={vi.fn()}
+        onAlias={vi.fn()}
+        onJoinDraft={vi.fn()}
+        onStart={vi.fn()}
+        onJoin={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("The Cluster That Forgot Its Name")).toBeInTheDocument();
+    expect(screen.getByText("The Bastion That Lost Its Runbook")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /The Bastion That Lost Its Runbook/ }));
+    expect(onSelect).toHaveBeenCalledWith("ansible-bastion");
   });
 
   it("shows an empty state and disables start", () => {
