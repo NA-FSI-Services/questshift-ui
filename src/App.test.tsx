@@ -96,6 +96,7 @@ const session: GameSession = {
   lastNarrative: "Torchlight.",
   lastHint: "pipe",
   lastCanvasEvent: "focus_room",
+  turnName: "Ada",
 };
 
 describe("App", () => {

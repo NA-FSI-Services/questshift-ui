@@ -37,6 +37,7 @@ function attemptAddressee(name?: string, seatId?: string): string {
 
 type Props = {
   session: GameSession | null;
+  playerAlias?: string;
   busy: boolean;
   waitMessage?: string | null;
   roomTitle?: string;
@@ -47,8 +48,18 @@ type Props = {
   onImport: (body: string) => Promise<void>;
 };
 
+function holdsFloor(session: GameSession | null, alias?: string): boolean {
+  const turn = session?.turnName?.trim() ?? "";
+  const me = alias?.trim() ?? "";
+  if (!turn || !me) {
+    return false;
+  }
+  return turn.toLowerCase() === me.toLowerCase();
+}
+
 export function TerminalPanel({
   session,
+  playerAlias,
   busy,
   waitMessage,
   roomTitle,
@@ -71,6 +82,12 @@ export function TerminalPanel({
   }, [log, session?.commandLog, session?.gmLog, session?.lastNarrative, session?.currentRoomId]);
 
   const hourOver = session?.status === "complete" || session?.status === "expired";
+  const myFloor = holdsFloor(session, playerAlias);
+  const floorWait =
+    session && session.status === "active" && !myFloor && session.turnName?.trim()
+      ? `waiting — ${session.turnName.trim()} has the floor`
+      : null;
+  const canType = Boolean(session) && !busy && !hourOver && myFloor;
   const clock = session
     ? `${Math.floor(session.elapsedSeconds / 60)}m ${session.elapsedSeconds % 60}s`
     : "--";
@@ -78,7 +95,7 @@ export function TerminalPanel({
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const command = draft.trim();
-    if (!command || !session || hourOver) {
+    if (!command || !session || hourOver || !myFloor) {
       return;
     }
     setDraft("");
@@ -138,6 +155,11 @@ export function TerminalPanel({
           </pre>
         ) : null}
         {waitMessage ? <pre className="sys"># {waitMessage}</pre> : null}
+        {floorWait ? (
+          <pre className="sys" role="status">
+            # {floorWait}
+          </pre>
+        ) : null}
         {roomAttempts(session).map((row, index) => (
           <div key={`${row.name}-${row.command}-${index}`}>
             <pre className={row.passed ? "board pass" : "board fail"}>
@@ -169,7 +191,7 @@ export function TerminalPanel({
         <textarea
           id="command"
           value={draft}
-          disabled={!session || busy || hourOver}
+          disabled={!canType}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -180,15 +202,17 @@ export function TerminalPanel({
           placeholder={
             waitMessage
               ? waitMessage
-              : hourOver
-                ? "the hour is complete"
-                : session
-                  ? "type a command, YAML, oc, or Java snippet…"
-                  : "start a session first"
+              : floorWait && session?.turnName
+                ? `the Game Master gave the floor to ${session.turnName.trim()}…`
+                : hourOver
+                  ? "the hour is complete"
+                  : session
+                    ? "type a command, YAML, oc, or Java snippet…"
+                    : "start a session first"
           }
           rows={3}
         />
-        <button type="submit" disabled={!session || busy || hourOver}>
+        <button type="submit" disabled={!canType}>
           send
         </button>
       </form>

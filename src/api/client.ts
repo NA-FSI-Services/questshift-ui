@@ -62,6 +62,8 @@ export type GameSession = {
   lastNarrative?: string;
   lastHint?: string;
   lastCanvasEvent?: string;
+  /** Alias who may type. Engine-owned floor. */
+  turnName?: string;
   yamlFallback?: boolean;
   commandLog?: CommandLogEntry[];
   gmLog?: GmLogEntry[];
@@ -99,13 +101,13 @@ export type Campaign = {
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
-type EngineError = Error & { joinCode?: string; status?: number };
+type EngineError = Error & { joinCode?: string; status?: number; error?: string };
 
 async function engineError(res: Response, fallback: string): Promise<EngineError> {
   const err = new Error(fallback) as EngineError;
   err.status = res.status;
   try {
-    const body = (await res.json()) as { message?: string; joinCode?: string };
+    const body = (await res.json()) as { message?: string; joinCode?: string; error?: string };
     if (typeof body.message === "string" && body.message.length > 0) {
       err.message = body.message;
     } else if (res.status === 404) {
@@ -113,6 +115,9 @@ async function engineError(res: Response, fallback: string): Promise<EngineError
     }
     if (typeof body.joinCode === "string" && body.joinCode.length > 0) {
       err.joinCode = body.joinCode;
+    }
+    if (typeof body.error === "string" && body.error.length > 0) {
+      err.error = body.error;
     }
   } catch {
     if (res.status === 404) {

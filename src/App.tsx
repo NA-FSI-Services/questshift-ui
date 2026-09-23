@@ -471,6 +471,14 @@ export default function App() {
       }
       setSession(result.session);
     } catch (err) {
+      const engineErr = err as Error & { error?: string };
+      if (engineErr.error === "not_your_turn") {
+        try {
+          setSession(await getSession(session.id));
+        } catch {
+          // Keep the last snapshot if refresh fails.
+        }
+      }
       setError(err instanceof Error ? err.message : "command failed");
     } finally {
       setPending(null);
@@ -668,6 +676,7 @@ export default function App() {
           </section>
           <TerminalPanel
             session={session}
+            playerAlias={me?.name}
             busy={busy}
             waitMessage={waitMessage}
             roomTitle={viewedRoom?.title}

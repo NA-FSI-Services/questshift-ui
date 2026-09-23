@@ -15,6 +15,7 @@ const session: GameSession = {
   puzzleCompletion: {},
   lastNarrative: "Torchlight.",
   lastHint: "pipe the log",
+  turnName: "Ada",
 };
 
 describe("TerminalPanel", () => {
@@ -25,6 +26,7 @@ describe("TerminalPanel", () => {
   it("disables send until a session exists", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={null}
         busy={false}
         onCommand={vi.fn()}
@@ -39,6 +41,7 @@ describe("TerminalPanel", () => {
   it("prints a wait line while a request is in flight", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={null}
         busy
         waitMessage="Starting the hour — waiting on the Game Master…"
@@ -58,6 +61,7 @@ describe("TerminalPanel", () => {
   it("shows only GM narrative, not puzzle JSON", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={{
           ...session,
           lastNarrative: `{
@@ -83,6 +87,7 @@ describe("TerminalPanel", () => {
   it("shows the clock, GM beat, and hint", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         onCommand={vi.fn()}
@@ -99,6 +104,7 @@ describe("TerminalPanel", () => {
   it("marks YAML fallback next to the clock", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={{ ...session, yamlFallback: true }}
         busy={false}
         onCommand={vi.fn()}
@@ -114,6 +120,7 @@ describe("TerminalPanel", () => {
     const onCommand = vi.fn().mockResolvedValue(undefined);
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         onCommand={onCommand}
@@ -130,6 +137,7 @@ describe("TerminalPanel", () => {
     const onCommand = vi.fn().mockResolvedValue(undefined);
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         onCommand={onCommand}
@@ -147,6 +155,7 @@ describe("TerminalPanel", () => {
     const onCommand = vi.fn();
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         onCommand={onCommand}
@@ -162,6 +171,7 @@ describe("TerminalPanel", () => {
     const onImport = vi.fn().mockResolvedValue(undefined);
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         onCommand={vi.fn()}
@@ -179,6 +189,7 @@ describe("TerminalPanel", () => {
   it("shows another player's command on the shared room board", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={{
           ...session,
           commandLog: [
@@ -222,6 +233,7 @@ describe("TerminalPanel", () => {
   it("stops the clock and shows the adventure recap when complete", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={{
           ...session,
           status: "complete",
@@ -253,6 +265,7 @@ describe("TerminalPanel", () => {
   it("shows the room description without dumping chest text", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         roomTitle="The Broken Shell"
@@ -271,6 +284,7 @@ describe("TerminalPanel", () => {
   it("shows lobby copy on the overworld and drops it inside a room", () => {
     const { rerender } = render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         lobbyCopy="Torchlight on brushed metal. Sixty minutes."
@@ -285,6 +299,7 @@ describe("TerminalPanel", () => {
     expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
     rerender(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         roomTitle="The Broken Shell"
@@ -300,6 +315,7 @@ describe("TerminalPanel", () => {
     expect(screen.queryByText(/# lobby/)).not.toBeInTheDocument();
     rerender(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         lobbyCopy="Torchlight on brushed metal. Sixty minutes."
@@ -354,6 +370,7 @@ describe("TerminalPanel", () => {
     };
     const { unmount } = render(
       <TerminalPanel
+        playerAlias="Ada"
         session={live}
         busy={false}
         onCommand={vi.fn()}
@@ -374,6 +391,7 @@ describe("TerminalPanel", () => {
     unmount();
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={live}
         busy={false}
         onCommand={vi.fn()}
@@ -389,6 +407,7 @@ describe("TerminalPanel", () => {
   it("does not label a room opening with the player who passed the previous room", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={{
           ...session,
           currentRoomId: "room-02-playbook-of-binding",
@@ -428,6 +447,7 @@ describe("TerminalPanel", () => {
   it("shows attempt prose from narrative and hides puzzle JSON", () => {
     render(
       <TerminalPanel
+        playerAlias="Ada"
         session={{
           ...session,
           commandLog: [
@@ -459,6 +479,7 @@ describe("TerminalPanel", () => {
   it("does not keep another room's narrative after leaving for a later interior", () => {
     const { rerender } = render(
       <TerminalPanel
+        playerAlias="Ada"
         session={session}
         busy={false}
         roomTitle="The Broken Shell"
@@ -471,6 +492,7 @@ describe("TerminalPanel", () => {
     expect(screen.getByText(/inside The Broken Shell/)).toBeInTheDocument();
     rerender(
       <TerminalPanel
+        playerAlias="Ada"
         session={{ ...session, currentRoomId: "room-02-playbook-of-binding" }}
         busy={false}
         roomTitle="The Playbook of Binding"
@@ -483,5 +505,41 @@ describe("TerminalPanel", () => {
     expect(screen.getByText(/inside The Playbook of Binding/)).toBeInTheDocument();
     expect(screen.queryByText(/inside The Broken Shell/)).not.toBeInTheDocument();
     expect(screen.queryByText(/A shell golem blocks the gate/)).not.toBeInTheDocument();
+  });
+
+  it("disables the prompt and shows a wait line when another alias holds the floor", () => {
+    render(
+      <TerminalPanel
+        playerAlias="Linus"
+        session={{ ...session, turnName: "Ada" }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "send" })).toBeDisabled();
+    expect(screen.getByLabelText("Command")).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("waiting — Ada has the floor");
+    expect(screen.getByLabelText("Command")).toHaveAttribute(
+      "placeholder",
+      "the Game Master gave the floor to Ada…",
+    );
+  });
+
+  it("keeps the prompt enabled when this alias holds the floor", () => {
+    render(
+      <TerminalPanel
+        playerAlias="Ada"
+        session={{ ...session, turnName: "Ada" }}
+        busy={false}
+        onCommand={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "send" })).not.toBeDisabled();
+    expect(screen.getByLabelText("Command")).not.toBeDisabled();
+    expect(screen.queryByText(/has the floor/)).not.toBeInTheDocument();
   });
 });
